@@ -171,7 +171,7 @@ struct MarkupView: View {
                             .foregroundStyle(color.color)
                             .focused($textFocused)
                             .frame(width: max(shown.width - typing.point.x * scale, 80), alignment: .leading)
-                            .offset(x: typing.point.x * scale, y: typing.point.y * scale)
+                            .offset(x: typing.point.x * scale, y: typing.point.y * scale) // grid: ok the text field sits where the person clicked
                             .onSubmit(commitText)
                     }
                 }
@@ -202,7 +202,7 @@ struct MarkupView: View {
                         Circle()
                             .fill(swatch.color)
                             .frame(width: 16, height: 16)
-                            .overlay { Circle().stroke(.primary, lineWidth: color == swatch ? 2 : 0).padding(-3) }
+                            .overlay { Circle().stroke(.primary, lineWidth: color == swatch ? 2 : 0).padding(-Space.xs) }
                     }
                     .buttonStyle(.plain)
                     .help(swatch.rawValue.capitalized)

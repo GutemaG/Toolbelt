@@ -162,7 +162,7 @@ enum SelfTest {
 
             // S-074 markup: marks land in the saved pixels, at full size
             let blank = Self.render(text: " ")
-            let marked = MarkPainter.render(blank, marks: [.redact(CGRect(x: 10, y: 10, width: 50, height: 50))])
+            let marked = MarkPainter.render(blank, marks: [.redact(CGRect(x: 10, y: 10, width: 50, height: 50))]) // grid: ok test pixels, not layout
             check("markup keeps the image's pixel size", marked?.width == blank.width && marked?.height == blank.height,
                   "\(marked?.width ?? 0)×\(marked?.height ?? 0) for \(blank.width)×\(blank.height)")
             if let marked, let data = marked.dataProvider?.data, let bytes = CFDataGetBytePtr(data) {
