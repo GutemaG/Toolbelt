@@ -16,6 +16,7 @@
 <key>NSPrincipalClass</key><string>NSApplication</string>
 <key>LSUIElement</key><true/>
 <key>NSAppleEventsUsageDescription</key><string>Toolbelt switches Dark Mode through System Events and empties the Trash through Finder when you ask it to.</string>
+<key>NSCameraUsageDescription</key><string>Toolbelt shows your camera in Camera, only while that tool is open.</string>
 <key>NSLocationUsageDescription</key><string>Toolbelt shows the name of your Wi-Fi network in Info. macOS counts network names as location.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>Toolbelt shows the name of your Wi-Fi network in Info. macOS counts network names as location.</string>
 <key>NSMicrophoneUsageDescription</key><string>Toolbelt records your microphone in screen recordings when you turn on Record microphone.</string>

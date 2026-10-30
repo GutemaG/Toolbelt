@@ -69,9 +69,9 @@ final class CaptureController {
         }
     }
 
-    func save(_ image: CGImage) {
+    func save(_ image: CGImage, kind: String = "Screenshot") {
         let format = CapturePrefs.format
-        let name = CaptureRules.fileName(kind: "Screenshot", date: .now, ext: format.ext)
+        let name = CaptureRules.fileName(kind: kind, date: .now, ext: format.ext)
         let folder = CapturePrefs.folder
         let url = CaptureRules.uniqueURL(in: folder, name: name) { FileManager.default.fileExists(atPath: $0.path) }
         guard let destination = CGImageDestinationCreateWithURL(url as CFURL, format.type.identifier as CFString, 1, nil) else { return }

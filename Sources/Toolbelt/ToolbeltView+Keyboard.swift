@@ -75,6 +75,8 @@ extension ToolbeltView {
         case (123, false) where tool == .info && query.isEmpty: MacInfo.shared.step(-1) // Left: previous Info tab
         case (124, false) where tool == .info && query.isEmpty: MacInfo.shared.step(1)  // Right: next Info tab
         case (15, true) where tool == .info: MacInfo.shared.load(MacInfo.shared.tab, force: true) // Command-R
+        case (36, _) where tool == .camera, (76, _) where tool == .camera: model.photoCount += 1 // Return takes a photo
+        case (46, false) where tool == .camera: Camera.toggleMirror() // M
         case (125, false): // Down: one row, or one grid row inside the pinned grid
             let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
             selected = min(selected + step, max(entries.count - 1, 0))

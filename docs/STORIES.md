@@ -568,6 +568,20 @@ UX:
 - Privacy: serials, MAC and public IP masked until shown; public IP from api.ipify.org only when Network opens; Location asked only on click
 Status: done
 
+### S-079 See yourself in Camera
+As the user, I open Camera and see a live preview of my camera inside Toolbelt, mirrored like a mirror, without opening Photo Booth or FaceTime; I can switch cameras and take a photo.
+Acceptance:
+- [unit] The camera picked last time wins while connected, then the one macOS prefers, then the first.
+- [self] Test runs never turn the camera on; a mirrored photo is flipped left to right.
+- [snap] panel-camera shows the placeholder preview, the camera menu, Mirror and Take Photo.
+- [manual] The green camera light goes out within a second of closing the popover or panel.
+UX:
+- Flow: tool picker or Camera's own menu bar icon -> preview starts -> M flips it, ↩ or Take Photo saves a photo (flash and sound) -> esc closes and the camera turns off
+- Surface: the shared panel and popover; no search field, the title takes its place
+- States: "Camera Access Off" with Open Privacy Settings; "No Camera" mentions Continuity Camera; "Unable to Start the Camera" with Try Again
+- Privacy: the camera runs only while the window is on screen; asks for Camera on first open; snapshots and the self-test show a placeholder
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.

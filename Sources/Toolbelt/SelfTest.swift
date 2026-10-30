@@ -215,6 +215,22 @@ enum SelfTest {
             check("the joined image is the whole page, top first", joined?.height == 1200 && difference < 300,
                   "\(joined?.width ?? 0)×\(joined?.height ?? 0), worst row \(difference)")
 
+            // S-079 camera: listing cameras is safe; test runs never turn one on
+            let camera = Camera.shared
+            camera.refreshDevices()
+            let viewer = UUID()
+            camera.show(viewer, true)
+            check("test runs never turn the camera on", camera.isSimulated && camera.state == .off)
+            camera.show(viewer, false)
+            check("the picked camera is one of those found", camera.deviceID == nil || camera.devices.contains { $0.id == camera.deviceID },
+                  camera.devices.map(\.name).joined(separator: ", "))
+            let wide = CGContext(data: nil, width: 4, height: 1, bitsPerComponent: 8, bytesPerRow: 0, space: CGColorSpace(name: CGColorSpace.sRGB)!,
+                                 bitmapInfo: CGImageAlphaInfo.premultipliedFirst.rawValue)!
+            wide.setFillColor(CGColor(red: 1, green: 0, blue: 0, alpha: 1))
+            wide.fill(CGRect(x: 0, y: 0, width: 1, height: 1))
+            let flipped = wide.makeImage().flatMap(Camera.flipped)
+            check("a mirrored photo is flipped left to right", flipped.map { Self.isRed($0, x: 3) && !Self.isRed($0, x: 0) } ?? false)
+
             // S-078 Info: every tab reads, offline (no public IP lookup)
             let offline = InfoReader.Options(locationAllowed: false, lookUpPublicIP: false)
             func rows(_ tab: InfoTab) async -> [InfoRow] { await InfoReader.read(tab, options: offline).flatMap(\.rows) }
@@ -281,6 +297,11 @@ enum SelfTest {
 
     /// Black text on white, at Retina size.
     /// A page of random colored blocks, different on every row band, for the scrolling capture check.
+    private static func isRed(_ image: CGImage, x: Int) -> Bool {
+        let rep = NSBitmapImageRep(cgImage: image)
+        return (rep.colorAt(x: x, y: 0)?.redComponent ?? 0) > 0.9
+    }
+
     private static func noisePage(width: Int, height: Int) -> CGImage {
         var seed: UInt64 = 7
         var pixels = [UInt8](repeating: 255, count: width * height * 4)

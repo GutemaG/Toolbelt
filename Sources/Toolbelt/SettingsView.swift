@@ -1,3 +1,4 @@
+import AVFoundation
 import ApplicationServices
 import ServiceManagement
 import SwiftUI
@@ -56,6 +57,7 @@ struct SettingsView: View {
             case .screenshots: ToolSettings(tool: .screenshots)
             case .recording: ToolSettings(tool: .recording)
             case .colors: ToolSettings(tool: .colors)
+            case .camera: ToolSettings(tool: .camera)
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
             case .sound: ToolSettings(tool: .sound)
@@ -91,7 +93,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, toggles, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -101,7 +103,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: .top
         case .launcher, .clipboard, .snippets: .input
-        case .screenshots, .recording, .colors: .capture
+        case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
         case .timer, .sound, .toggles, .system, .info, .keepAwake: .tools
         case .appearance: .app
@@ -171,6 +173,7 @@ struct GeneralSettings: View {
     @State private var loginError: String?
     @State private var accessibility = AXIsProcessTrusted()
     @State private var screenRecording = CGPreflightScreenCaptureAccess()
+    @State private var camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
 
     var body: some View {
         Section {
@@ -186,6 +189,15 @@ struct GeneralSettings: View {
                 CGRequestScreenCaptureAccess()
                 open("Privacy_ScreenCapture")
             }
+            PermissionRow(symbol: "web.camera", title: "Camera",
+                          detail: "The live preview in Camera.",
+                          isOn: camera) {
+                if AVCaptureDevice.authorizationStatus(for: .video) == .notDetermined {
+                    Task { camera = await AVCaptureDevice.requestAccess(for: .video) }
+                } else {
+                    open("Privacy_Camera")
+                }
+            }
         } header: {
             // Follows the page header, which would otherwise make it render light; match the other headings.
             Text("Permissions").font(.headline).foregroundStyle(.primary)
@@ -199,6 +211,7 @@ struct GeneralSettings: View {
             while !Task.isCancelled {
                 accessibility = AXIsProcessTrusted()
                 screenRecording = CGPreflightScreenCaptureAccess()
+                camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
                 try? await Task.sleep(for: .seconds(1.5))
             }
         }
@@ -398,6 +411,8 @@ struct ToolSettings: View {
             ScreenshotOptions()
         case .colors:
             ColorOptions()
+        case .camera:
+            CameraOptions()
         case .windows:
             WindowOptions()
         case .keepAwake:
@@ -614,6 +629,28 @@ private struct WindowOptions: View {
         Section {
         } footer: {
             Text("Moves the front window on the screen it is on. Needs Accessibility.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Settings > Camera.
+private struct CameraOptions: View {
+    @AppStorage(Camera.mirrorKey) private var mirror = true
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $mirror) {
+                Text("Mirror the preview")
+                Text("Shows you the way a mirror does. Photos are saved the way the preview shows them.")
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("The camera turns on only while Camera is open and turns off when the window closes. Photos go to your screenshot folder. Asks for Camera access the first time.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

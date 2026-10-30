@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, info, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, toggles, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -16,6 +16,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .screenshots: "Screenshots"
         case .recording: "Recording"
         case .colors: "Colors"
+        case .camera: "Camera"
         case .windows: "Windows"
         case .timer: "Timer"
         case .sound: "Sound"
@@ -34,6 +35,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .screenshots: "camera.viewfinder"
         case .recording: "record.circle"
         case .colors: "eyedropper"
+        case .camera: "web.camera"
         case .windows: "rectangle.split.2x1"
         case .timer: "timer"
         case .sound: "speaker.wave.2"
@@ -53,6 +55,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .screenshots: "Capture an area, a window or the whole screen."
         case .recording: "Record an area, a window or the screen to a movie."
         case .colors: "Pick any color on the screen and copy it."
+        case .camera: "See yourself in a live camera preview, like a mirror."
         case .windows: "Snap the front window to halves, thirds or full size."
         case .timer: "Count down, with the time left in the menu bar."
         case .sound: "Switch between speakers, headphones and AirPods."
@@ -72,6 +75,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .screenshots: .purple
         case .recording: .red
         case .colors: .teal
+        case .camera: .green
         case .windows: .indigo
         case .timer: .green
         case .sound: .cyan
@@ -90,6 +94,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .screenshots: "Take a screenshot"
         case .recording: "Record the screen"
         case .colors: "Pick a color"
+        case .camera: "Check how you look on camera"
         case .windows: "Snap windows"
         case .timer: "Start a timer"
         case .sound: "Choose the sound output"

@@ -61,6 +61,8 @@ final class AppModel {
     }
     /// Bumped each time a surface opens, so views reset their search and selection.
     var openCount = 0
+    /// Bumped by Return in Camera, so the open preview takes a photo and flashes.
+    var photoCount = 0
     /// After Add…: the Launcher lists every app with a pin button, until Done.
     var pickingApps = false
     /// Set by Recorder, so every view's Record/Stop button follows it.

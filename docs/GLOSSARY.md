@@ -32,4 +32,7 @@ Every word on screen comes from this table. Code names may differ
 | Bring to Front | Switch to a running app from System's list | open, focus, activate |
 | Scrolling capture | A screenshot taller than the screen, joined from an area as it is scrolled by hand | long screenshot, stitch, panorama |
 | Info | The tool with Battery, Storage, Hardware, Network and Developer tabs about this Mac | About, specs, system information |
+| Camera | The tool with a live preview of a camera, to check how you look | Mirror app, webcam, Photo Booth |
+| Mirror | Flip the camera preview left to right, as a mirror shows you | flip, reverse |
+| Take Photo | Save the camera preview as an image in the screenshot folder | snap, capture, shoot |
 | Copy All | Copy everything on the open Info tab as plain text | export, report |

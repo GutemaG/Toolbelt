@@ -45,6 +45,8 @@ struct ToolbeltView: View {
             }
             if tool == .info {
                 InfoView(surface: surface, query: query)
+            } else if tool == .camera {
+                CameraView(surface: surface, window: window)
             } else {
                 results
             }
@@ -103,20 +105,16 @@ struct ToolbeltView: View {
 
     var searchRow: some View {
         HStack(spacing: Space.md) {
-            Image(systemName: "magnifyingglass")
-                .font(.title2)
-                .foregroundStyle(.secondary)
-            TextField(placeholder, text: $query)
-                .textFieldStyle(.plain)
-                .font(.title2)
-                .focused($searchFocused)
-                .accessibilityLabel(tool == .launcher ? "Search apps" : "Search clips")
-            if !query.isEmpty {
-                Button("Clear", systemImage: "xmark.circle.fill") { query = "" }
-                    .labelStyle(.iconOnly)
-                    .buttonStyle(.plain)
+            if tool == .camera {
+                // Nothing to search: the row keeps the title and, in the panel, the tool picker.
+                Image(systemName: Tool.camera.symbol)
+                    .font(.title2)
                     .foregroundStyle(.secondary)
-                    .help("Clear the search")
+                Text(Tool.camera.title)
+                    .font(.title2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                searchField
             }
             if surface == .panel, showsPicker {
                 toolPicker
@@ -124,6 +122,25 @@ struct ToolbeltView: View {
         }
         .padding(.horizontal, Space.lg)
         .padding(.vertical, Space.md)
+    }
+
+    @ViewBuilder
+    var searchField: some View {
+        Image(systemName: "magnifyingglass")
+            .font(.title2)
+            .foregroundStyle(.secondary)
+        TextField(placeholder, text: $query)
+            .textFieldStyle(.plain)
+            .font(.title2)
+            .focused($searchFocused)
+            .accessibilityLabel(tool == .launcher ? "Search apps" : "Search clips")
+        if !query.isEmpty {
+            Button("Clear", systemImage: "xmark.circle.fill") { query = "" }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.plain)
+                .foregroundStyle(.secondary)
+                .help("Clear the search")
+        }
     }
 
     var placeholder: String {

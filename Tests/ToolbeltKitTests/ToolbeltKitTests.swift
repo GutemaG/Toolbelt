@@ -288,3 +288,11 @@ func toolVersions(_ output: String, marker: String?, expected: String) {
     #expect(InfoRules.batteryCondition(nil, maximumCapacity: 75) == "Service Recommended")
     #expect(InfoRules.signal(rssi: -45) == "Excellent" && InfoRules.signal(rssi: -65) == "Fair" && InfoRules.signal(rssi: -80) == "Weak")
 }
+
+@Test func cameraPick() {
+    let cameras = ["built-in", "iphone", "usb"]
+    #expect(CameraRules.pick(saved: "usb", preferred: "iphone", available: cameras) == "usb")
+    #expect(CameraRules.pick(saved: "gone", preferred: "iphone", available: cameras) == "iphone")
+    #expect(CameraRules.pick(saved: nil, preferred: nil, available: cameras) == "built-in")
+    #expect(CameraRules.pick(saved: "usb", preferred: nil, available: []) == nil)
+}
