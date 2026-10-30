@@ -1,61 +1,174 @@
-import Foundation
+import AppKit
 import SwiftData
 import ToolbeltKit
 
+/// One thing the user copied: text, a link, or an image.
 @Model
-final class Item {
-    var title: String
-    var notes: String = ""
-    var isStarred: Bool = false
-    var createdAt: Date = Date.now
-    /// A stable id for links, sync, and the agent CLI.
+final class ClipItem {
+    var kindRaw: String = ClipKind.text.rawValue
+    var text: String = ""
+    @Attribute(.externalStorage) var imageData: Data?
+    /// Text itself, or a hash of the image, so a repeat copy moves the old clip up.
+    var fingerprint: String = ""
+    var sourceBundleID: String?
+    var copiedAt: Date = Date.now
+    var isPinned: Bool = false
     var uuid: UUID = UUID()
 
-    init(title: String) {
-        self.title = title
+    var kind: ClipKind { ClipKind(rawValue: kindRaw) ?? .text }
+
+    init(kind: ClipKind, text: String = "", imageData: Data? = nil, fingerprint: String, sourceBundleID: String?) {
+        self.kindRaw = kind.rawValue
+        self.text = text
+        self.imageData = imageData
+        self.fingerprint = fingerprint
+        self.sourceBundleID = sourceBundleID
     }
 }
 
-/// The sidebar pages. Snapshot mode walks through every case.
-enum SidebarItem: String, CaseIterable, Identifiable {
-    case all, starred
+enum ClipKind: String {
+    case text, link, image
+}
+
+/// How often an app was opened from the launcher. Ranks results.
+@Model
+final class AppLaunch {
+    var path: String = ""
+    var count: Int = 0
+    var lastLaunched: Date?
+
+    init(path: String) {
+        self.path = path
+    }
+}
+
+/// The tools in Toolbelt. Each one is a tab in the popover and the panel.
+enum Tool: String, CaseIterable, Identifiable {
+    case launcher, clipboard
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .all: "All Items"
-        case .starred: "Starred"
+        case .launcher: "Launcher"
+        case .clipboard: "Clipboard"
         }
     }
 
     var symbol: String {
         switch self {
-        case .all: "tray"
-        case .starred: "star"
+        case .launcher: "magnifyingglass"
+        case .clipboard: "doc.on.clipboard"
+        }
+    }
+
+    var help: String {
+        switch self {
+        case .launcher: "Find and open apps (⌘1)"
+        case .clipboard: "Search clipboard history (⌘2)"
         }
     }
 }
 
-/// App-wide state that menus, toolbars, and views share.
+/// App-wide state that the popover, the panel, and Settings share.
 @Observable
 final class AppModel {
     let container: ModelContainer
-    var sidebar: SidebarItem? = .all
-    var selection: PersistentIdentifier?
+    let apps = AppIndex()
+    @ObservationIgnored lazy var clipboard = ClipboardMonitor(model: self)
+    /// The last used tool; the popover opens on it.
+    var tool: Tool = Tool(rawValue: UserDefaults.standard.string(forKey: "tool") ?? "") ?? .launcher {
+        didSet { if !Store.isOverridden { UserDefaults.standard.set(tool.rawValue, forKey: "tool") } }
+    }
     /// Settings reopens on the last tab. Test and snapshot runs leave it alone.
     var settingsTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "settings.tab") ?? "") ?? .general {
         didSet { if !Store.isOverridden { UserDefaults.standard.set(settingsTab.rawValue, forKey: "settings.tab") } }
     }
+    /// Bumped each time a surface opens, so views reset their search and selection.
+    var openCount = 0
 
     init(container: ModelContainer) {
         self.container = container
     }
 
-    func addItem(title: String = "") {
-        let item = Item(title: ItemTitle.clean(title))
-        if sidebar == .starred { item.isStarred = true }
-        container.mainContext.insert(item)
-        selection = item.id
+    var context: ModelContext { container.mainContext }
+
+    // MARK: Launcher
+
+    func launchCandidates() -> [LaunchCandidate] {
+        let launches = (try? context.fetch(FetchDescriptor<AppLaunch>())) ?? []
+        let byPath = Dictionary(launches.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
+        return apps.apps.map { app in
+            let launch = byPath[app.path]
+            return LaunchCandidate(name: app.name, path: app.path,
+                                   launchCount: launch?.count ?? 0, lastLaunched: launch?.lastLaunched)
+        }
+    }
+
+    /// Records the launch, then opens the app or brings it to the front.
+    func open(_ app: LaunchCandidate) {
+        recordLaunch(path: app.path)
+        let config = NSWorkspace.OpenConfiguration()
+        config.activates = true
+        NSWorkspace.shared.openApplication(at: URL(fileURLWithPath: app.path), configuration: config)
+    }
+
+    func recordLaunch(path: String) {
+        var descriptor = FetchDescriptor<AppLaunch>(predicate: #Predicate { $0.path == path })
+        descriptor.fetchLimit = 1
+        let launch = (try? context.fetch(descriptor).first) ?? {
+            let new = AppLaunch(path: path)
+            context.insert(new)
+            return new
+        }()
+        launch.count += 1
+        launch.lastLaunched = .now
+        try? context.save()
+    }
+
+    // MARK: Clipboard
+
+    /// Saves a copy, or moves the clip with the same contents to the top.
+    @discardableResult
+    func record(kind: ClipKind, text: String = "", imageData: Data? = nil, fingerprint: String, source: String?) -> ClipItem {
+        var descriptor = FetchDescriptor<ClipItem>(predicate: #Predicate { $0.fingerprint == fingerprint })
+        descriptor.fetchLimit = 1
+        if let existing = try? context.fetch(descriptor).first {
+            existing.copiedAt = .now
+            existing.sourceBundleID = source ?? existing.sourceBundleID
+            try? context.save()
+            return existing
+        }
+        let clip = ClipItem(kind: kind, text: text, imageData: imageData, fingerprint: fingerprint, sourceBundleID: source)
+        context.insert(clip)
+        prune()
+        try? context.save()
+        return clip
+    }
+
+    /// Puts a clip back on the clipboard and moves it to the top.
+    func copy(_ clip: ClipItem, plainText: Bool = false) {
+        clipboard.write(clip, plainText: plainText)
+        clip.copiedAt = .now
+        try? context.save()
+    }
+
+    func togglePin(_ clip: ClipItem) {
+        clip.isPinned.toggle()
+        prune()
+        try? context.save()
+    }
+
+    func delete(_ clip: ClipItem) {
+        context.delete(clip)
+        try? context.save()
+    }
+
+    /// Keeps at most ClipRules.historyLimit unpinned clips.
+    func prune() {
+        let descriptor = FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.copiedAt, order: .reverse)])
+        let clips = (try? context.fetch(descriptor)) ?? []
+        let doomed = Set(ClipRules.pruned(clips.map { (id: $0.persistentModelID, isPinned: $0.isPinned) }))
+        for clip in clips where doomed.contains(clip.persistentModelID) { context.delete(clip) }
     }
 }

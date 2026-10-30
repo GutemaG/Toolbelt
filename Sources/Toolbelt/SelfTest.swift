@@ -6,6 +6,7 @@ import ToolbeltKit
 /// prints PASS or FAIL per check, and quits with exit code 0 or 1.
 ///   APP_STORE=/tmp/Toolbelt-self.store ~/Applications/Toolbelt.app/Contents/MacOS/Toolbelt --selftest
 /// (tools/selftest.sh does this.) Add a check for every story with logic.
+/// It never touches the real clipboard.
 @MainActor
 enum SelfTest {
     static var requested: Bool { CommandLine.arguments.contains("--selftest") }
@@ -26,21 +27,53 @@ enum SelfTest {
         Task {
             try? await Task.sleep(for: .seconds(0.5))
             let context = model.container.mainContext
-            func items() -> [Item] { (try? context.fetch(FetchDescriptor<Item>())) ?? [] }
-
-            let before = items().count
-            model.addItem()
-            check("New Item adds one item", items().count == before + 1)
-            check("the new item is selected", model.selection != nil)
-
-            if let item = items().first(where: { $0.id == model.selection }) {
-                item.isStarred.toggle()
-                check("starring an item marks it starred", item.isStarred)
-                context.delete(item)
-                try? context.save()
-                check("deleting the item removes it", items().count == before)
+            func clips() -> [ClipItem] {
+                (try? context.fetch(FetchDescriptor<ClipItem>(sortBy: [SortDescriptor(\.copiedAt, order: .reverse)]))) ?? []
             }
-            check("titles are cleaned", ItemTitle.clean("  Buy   milk ") == "Buy milk")
+
+            // S-002 record copies
+            let before = clips().count
+            model.record(kind: .text, text: "hello", fingerprint: "t:hello", source: "com.apple.Notes")
+            try? await Task.sleep(for: .milliseconds(10))
+            model.record(kind: .link, text: "https://apple.com", fingerprint: "t:https://apple.com", source: nil)
+            check("copies are saved", clips().count == before + 2)
+            check("newest clip is first", clips().first?.text == "https://apple.com")
+            try? await Task.sleep(for: .milliseconds(10))
+            model.record(kind: .text, text: "hello", fingerprint: "t:hello", source: "com.apple.Notes")
+            check("a repeat copy moves the clip up instead of adding one", clips().count == before + 2 && clips().first?.text == "hello")
+            check("the source app is stored", clips().first?.sourceBundleID == "com.apple.Notes")
+
+            // S-013 pin, S-018 history limit
+            if let first = clips().first { model.togglePin(first) }
+            for i in 0..<(ClipRules.historyLimit + 5) {
+                model.record(kind: .text, text: "clip \(i)", fingerprint: "t:clip \(i)", source: nil)
+            }
+            let all = clips()
+            check("history keeps \(ClipRules.historyLimit) unpinned clips", all.filter { !$0.isPinned }.count == ClipRules.historyLimit,
+                  "\(all.filter { !$0.isPinned }.count)")
+            check("pinned clips survive pruning", all.contains { $0.text == "hello" && $0.isPinned })
+
+            // S-014 delete
+            if let victim = clips().first(where: { !$0.isPinned }) {
+                let id = victim.uuid
+                model.delete(victim)
+                check("deleting a clip removes it", !clips().contains { $0.uuid == id })
+            }
+
+            // S-006, S-007, S-008 launcher
+            let scanned = AppIndex.scan()
+            check("the app index finds Safari", scanned.contains { $0.name == "Safari" }, "\(scanned.count) apps")
+            model.recordLaunch(path: "/Applications/Safari.app")
+            model.recordLaunch(path: "/Applications/Safari.app")
+            let launch = try? context.fetch(FetchDescriptor<AppLaunch>()).first { $0.path == "/Applications/Safari.app" }
+            check("opening an app counts the launch", launch?.count == 2)
+            let ranked = LauncherRanking.rank(scanned.map { LaunchCandidate(name: $0.name, path: $0.path,
+                                                                             launchCount: $0.name == "Safari" ? 2 : 0) }, query: "")
+            check("Frequent lists opened apps", ranked.first?.name == "Safari")
+
+            // S-002 secrets
+            check("password manager copies are skipped",
+                  ClipRules.shouldSkip(types: ["org.nspasteboard.ConcealedType"], sourceApp: nil))
 
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
