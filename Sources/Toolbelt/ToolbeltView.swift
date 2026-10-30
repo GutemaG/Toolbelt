@@ -562,6 +562,9 @@ struct ToolbeltView: View {
         monitor = nil
     }
 
+    /// Key codes of 1 to 9 on the top row.
+    private static let digitKeys: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25]
+
     private func handle(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let entries = flatEntries
@@ -585,8 +588,8 @@ struct ToolbeltView: View {
         case (48, false) where fixedTool == nil && panelTools.count > 1: // Tab switches tool
             let index = panelTools.firstIndex(of: model.tool) ?? 0
             model.tool = panelTools[(index + 1) % panelTools.count]
-        case (18, true) where fixedTool == nil && panelTools.count > 0: model.tool = panelTools[0] // Command-1
-        case (19, true) where fixedTool == nil && panelTools.count > 1: model.tool = panelTools[1] // Command-2
+        case (let key, true) where fixedTool == nil && Self.digitKeys.firstIndex(of: key).map({ $0 < panelTools.count }) == true:
+            model.tool = panelTools[Self.digitKeys.firstIndex(of: key)!] // Command-1 to Command-9
         case (43, true): openSettings()            // Command-,
         case (12, true): NSApp.terminate(nil)      // Command-Q
         case (35, true): // Command-P pins a clip or an app
