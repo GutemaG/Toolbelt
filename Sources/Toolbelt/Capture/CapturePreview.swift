@@ -79,6 +79,11 @@ private struct CapturePreviewView: View {
                 }
                 .help("Copy to the clipboard")
                 if capture.kind == .screenshot {
+                    Button("Markup", systemImage: "pencil.tip.crop.circle") {
+                        CaptureController.shared.markup(capture)
+                        onClose()
+                    }
+                    .help("Draw arrows, boxes and text on it")
                     Button("Pin to Screen", systemImage: "pin") {
                         PinnedImage.pin(capture.url)
                         onClose()

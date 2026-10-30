@@ -100,6 +100,10 @@ final class CaptureController {
 
     // MARK: Recent captures
 
+    func markup(_ capture: Capture) {
+        MarkupWindow.open(capture, model: model)
+    }
+
     func delete(_ capture: Capture) {
         try? FileManager.default.trashItem(at: capture.url, resultingItemURL: nil)
         model.context.delete(capture)

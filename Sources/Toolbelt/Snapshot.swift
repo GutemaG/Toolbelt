@@ -55,6 +55,28 @@ enum Snapshot {
                 model.pickingApps = false
             }
             PanelController.shared.hide()
+            // The Markup window, on a drawn sample image that is deleted afterwards.
+            if only == nil || only?.contains("markup") == true {
+                let url = CapturePrefs.folder.appendingPathComponent("markup-sample.png")
+                let sample = NSImage(size: NSSize(width: 1200, height: 700), flipped: false) { rect in
+                    NSColor.white.setFill(); rect.fill()
+                    ("Quarterly numbers" as NSString).draw(at: NSPoint(x: 80, y: 520), withAttributes: [.font: NSFont.boldSystemFont(ofSize: 64)])
+                    ("Revenue up 12%, costs flat, account 4417-2210" as NSString).draw(at: NSPoint(x: 80, y: 400), withAttributes: [.font: NSFont.systemFont(ofSize: 40)])
+                    return true
+                }
+                if let tiff = sample.tiffRepresentation, let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
+                    try? png.write(to: url)
+                    MarkupWindow.open(Capture(kind: .screenshot, url: url, width: 1200, height: 700), model: model)
+                    try? await Task.sleep(for: .seconds(1))
+                    for mode in ["light", "dark"] {
+                        NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                        try? await Task.sleep(for: .seconds(0.6))
+                        capture(to: "\(dir)/markup-\(mode).png", window: NSApp.keyWindow ?? NSApp.windows.first { $0.title.hasPrefix("Markup") })
+                    }
+                    NSApp.windows.filter { $0.title.hasPrefix("Markup") }.forEach { $0.close() }
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
             if only == nil || only?.contains("settings") == true {
                 SettingsWindow.shared.show(model: model)
                 try? await Task.sleep(for: .seconds(1))

@@ -504,6 +504,30 @@ Acceptance:
 - [manual] Drag to move, drag an edge to resize keeping its shape, Esc or right-click > Close to close, right-click > Copy.
 Status: done
 
+### S-070 Timer
+As the user, I start a countdown (a preset or a typed length like 12, 90s, 1h30m) and see the time left in the menu bar; at zero I hear a chime and see a notification.
+Status: done
+
+### S-071 Switch sound output
+As the user, I pick speakers, headphones or AirPods from Sound, or mute, without opening Control Center.
+Status: done
+
+### S-072 Flip a system toggle
+As the user, I switch Dark Mode, desktop icons or hidden files, lock the screen, sleep the display, start the screen saver, or empty the Trash after confirming.
+Status: done
+
+### S-073 Paste a snippet
+As the user, I save text as a snippet with an optional keyword, find it by keyword, title or text with ⌃⌥S, and paste it with Return.
+Status: done
+
+### S-074 Mark up a screenshot
+As the user, I open Markup from the preview or a recent screenshot, draw arrows, boxes, highlights, text and redactions, undo, copy, and save an annotated copy next to the original.
+Status: done
+
+### S-075 Change shortcuts
+As the user, I record, clear or reset any Toolbelt shortcut on its tool's Settings page, and see a warning when two collide.
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.

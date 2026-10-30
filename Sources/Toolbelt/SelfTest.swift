@@ -160,6 +160,16 @@ enum SelfTest {
             model.deleteSnippet(address)
             check("deleting a snippet removes it", ((try? context.fetch(FetchDescriptor<Snippet>())) ?? []).count == saved.count - 1)
 
+            // S-074 markup: marks land in the saved pixels, at full size
+            let blank = Self.render(text: " ")
+            let marked = MarkPainter.render(blank, marks: [.redact(CGRect(x: 10, y: 10, width: 50, height: 50))])
+            check("markup keeps the image's pixel size", marked?.width == blank.width && marked?.height == blank.height,
+                  "\(marked?.width ?? 0)×\(marked?.height ?? 0) for \(blank.width)×\(blank.height)")
+            if let marked, let data = marked.dataProvider?.data, let bytes = CFDataGetBytePtr(data) {
+                let offset = 30 * marked.bytesPerRow + 30 * (marked.bitsPerPixel / 8)
+                check("a redaction turns its pixels black", bytes[offset] < 20 && bytes[offset + 1] < 20 && bytes[offset + 2] < 20)
+            }
+
             // S-061 Keep Awake
             KeepAwake.shared.start(for: 60)
             check("Keep Awake holds a power assertion", KeepAwake.shared.isOn && model.awakeUntil != nil)

@@ -376,6 +376,7 @@ struct ToolbeltView: View {
             Button("Open") { activate(entry, plainText: false) }
             Button("Copy") { CaptureController.shared.copy(capture) }
             if capture.kind == .screenshot {
+                Button("Markup…") { close(); CaptureController.shared.markup(capture) }
                 Button("Pin to Screen") { PinnedImage.pin(capture.url) }
             }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([capture.url]) }
