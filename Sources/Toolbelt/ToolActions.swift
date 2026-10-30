@@ -165,7 +165,7 @@ enum ToolActions {
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
         case .toggles: return "↩ Flip the switch   Highlighted ones are on"
-        case .knock: return "Knock on the palm rest, the lid or the desk   Knocks while typing are ignored"
+        case .knock: return "Knock on the palm rest, lid or desk   Typing is ignored"
         case .mixer: return "↑↓ Choose   ←→ Volume   ↩ Mute   Right-click to reset"
         case .camera: return "↩ Take Photo   M Mirror   The camera turns off when this closes"
         case .info: return "←→ Switch Tabs   Click a value to copy it   ⌘R Refresh"

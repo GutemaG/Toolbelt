@@ -76,13 +76,15 @@ struct ToolbeltView: View {
 
     // MARK: Parts
 
-    /// In the panel the tool picker sits beside the search field; the popover
-    /// is narrower, so it gets its own row below.
+    /// In the panel the tool picker sits beside the search field while it
+    /// fits; otherwise, and always in the narrower popover, it gets its own
+    /// row below and wraps onto as many lines as it needs.
     var header: some View {
         VStack(spacing: 0) {
             searchRow
-            if surface == .popover, showsPicker {
+            if showsPicker, !pickerInline {
                 toolPicker
+                    .frame(maxWidth: .infinity)
                     .padding(.horizontal, Space.lg)
                     .padding(.bottom, Space.md)
             }
@@ -91,10 +93,15 @@ struct ToolbeltView: View {
 
     var showsPicker: Bool { fixedTool == nil && panelTools.count > 1 }
 
+    /// The picker fits beside the search field and leaves the field room to type.
+    var pickerInline: Bool {
+        surface == .panel && ToolPickerButton.width * CGFloat(panelTools.count) + 4 <= PanelController.size.width - Space.lg * 2 - 240
+    }
+
     /// One button per tool. Hovering shows the tool's name at once, and the
     /// system tooltip adds what it does and its ⌘ number.
     var toolPicker: some View {
-        HStack(spacing: 2) {
+        WrappingRow(spacing: 2) {
             ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
                 ToolPickerButton(tool: tool, number: index + 1, selected: tool == self.tool) {
                     model.tool = tool
@@ -102,7 +109,8 @@ struct ToolbeltView: View {
             }
         }
         .padding(2)
-        .background(.fill.tertiary, in: .capsule)
+        // Half a row's height: a capsule on one row, rounded corners on more.
+        .background(.fill.tertiary, in: .rect(cornerRadius: 14))
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Tools")
     }
@@ -120,7 +128,7 @@ struct ToolbeltView: View {
             } else {
                 searchField
             }
-            if surface == .panel, showsPicker {
+            if showsPicker, pickerInline {
                 toolPicker
             }
         }

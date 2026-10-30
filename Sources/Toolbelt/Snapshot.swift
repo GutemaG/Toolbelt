@@ -87,6 +87,23 @@ enum Snapshot {
                 }
                 window.orderOut(nil)
             }
+            // The menu bar popover's width, where the tool picker wraps onto two rows.
+            if only == nil || only?.contains("popover") == true {
+                let host = NSHostingView(rootView: ToolbeltView(surface: .popover)
+                    .environment(model)
+                    .modelContainer(model.container)
+                    .themed())
+                let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
+                window.contentView = host
+                window.orderFrontRegardless()
+                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark")] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    model.tool = tool
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/popover-\(tool.rawValue)-\(mode).png", window: window)
+                }
+                window.orderOut(nil)
+            }
             // The Markup window, on a drawn sample image that is deleted afterwards.
             if only == nil || only?.contains("markup") == true {
                 let url = CapturePrefs.folder.appendingPathComponent("markup-sample.png")

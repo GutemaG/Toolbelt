@@ -133,6 +133,9 @@ struct QuickActionStyle: ButtonStyle {
 /// A tool in the picker row: its icon, an accent fill when selected, and its
 /// name in a small label right under it while the pointer is over it.
 struct ToolPickerButton: View {
+    /// A button and the gap after it, for working out how many fit on a line.
+    static let width: CGFloat = 30
+
     let tool: Tool
     let number: Int
     let selected: Bool
@@ -169,5 +172,53 @@ struct ToolPickerButton: View {
         .help("\(tool.title): \(tool.help) (⌘\(number))")
         .accessibilityLabel(tool.title)
         .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+    }
+}
+
+/// Lays its views out in a row and wraps onto more rows when they do not fit
+/// the width offered. Rows are balanced (17 tools make 9 and 8, not 13 and 4),
+/// and every view gets the size it asks for.
+struct WrappingRow: Layout {
+    var spacing: CGFloat = 0
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let rows = rows(for: proposal.width, subviews: subviews)
+        let height = rows.map { row in row.map { subviews[$0].sizeThatFits(.unspecified).height }.max() ?? 0 }
+        return CGSize(width: rows.map { width(of: $0, subviews) }.max() ?? 0,
+                      height: height.reduce(0, +) + spacing * CGFloat(max(rows.count - 1, 0)))
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        for row in rows(for: bounds.width, subviews: subviews) {
+            var x = bounds.minX
+            let height = row.map { subviews[$0].sizeThatFits(.unspecified).height }.max() ?? 0
+            for index in row {
+                let size = subviews[index].sizeThatFits(.unspecified)
+                subviews[index].place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
+                x += size.width + spacing
+            }
+            y += height + spacing
+        }
+    }
+
+    /// Indices per row: as few rows as fit, then the same count on each.
+    private func rows(for available: CGFloat?, subviews: Subviews) -> [[Int]] {
+        let all = Array(subviews.indices)
+        guard let available, !all.isEmpty else { return [all] }
+        var fit = 0, used: CGFloat = 0
+        for index in all {
+            let next = used + (fit > 0 ? spacing : 0) + subviews[index].sizeThatFits(.unspecified).width
+            if next > available { break }
+            used = next
+            fit += 1
+        }
+        let rowCount = Int((Double(all.count) / Double(max(fit, 1))).rounded(.up))
+        let perRow = Int((Double(all.count) / Double(rowCount)).rounded(.up))
+        return stride(from: 0, to: all.count, by: perRow).map { Array(all[$0..<min($0 + perRow, all.count)]) }
+    }
+
+    private func width(of row: [Int], _ subviews: Subviews) -> CGFloat {
+        row.reduce(0) { $0 + subviews[$1].sizeThatFits(.unspecified).width } + spacing * CGFloat(max(row.count - 1, 0))
     }
 }
