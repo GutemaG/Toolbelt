@@ -129,3 +129,45 @@ struct QuickActionStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
+
+/// A tool in the picker row: its icon, an accent fill when selected, and its
+/// name in a small label right under it while the pointer is over it.
+struct ToolPickerButton: View {
+    let tool: Tool
+    let number: Int
+    let selected: Bool
+    let action: () -> Void
+    @State private var hovering = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: tool.symbol)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 28, height: 24)
+                .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.primary))
+                .background {
+                    Capsule().fill(selected ? AnyShapeStyle(Palette.accent) : AnyShapeStyle(hovering ? AnyShapeStyle(.fill.secondary) : AnyShapeStyle(.clear)))
+                }
+                .contentShape(.capsule)
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering = $0 }
+        .overlay(alignment: .top) {
+            if hovering {
+                Text(tool.title)
+                    .font(.caption.weight(.medium))
+                    .fixedSize()
+                    .padding(.horizontal, Space.sm)
+                    .padding(.vertical, 2)
+                    .background(.regularMaterial, in: .capsule)
+                    .shadow(radius: 2, y: 1)
+                    .alignmentGuide(.top) { _ in -32 }
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
+        }
+        .help("\(tool.title): \(tool.help) (⌘\(number))")
+        .accessibilityLabel(tool.title)
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+    }
+}

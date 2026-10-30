@@ -36,6 +36,7 @@ struct ToolbeltView: View {
     var body: some View {
         VStack(spacing: 0) {
             header
+                .zIndex(1) // the tool name label under a hovered icon floats over the list
             Divider()
             quickActions
             results
@@ -76,19 +77,20 @@ struct ToolbeltView: View {
 
     var showsPicker: Bool { fixedTool == nil && panelTools.count > 1 }
 
+    /// One button per tool. Hovering shows the tool's name at once, and the
+    /// system tooltip adds what it does and its ⌘ number.
     var toolPicker: some View {
-        @Bindable var model = model
-        return Picker("Tool", selection: $model.tool) {
+        HStack(spacing: 2) {
             ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
-                Label(tool.title, systemImage: tool.symbol)
-                    .labelStyle(.iconOnly)
-                    .help("\(tool.help) (⌘\(index + 1))")
-                    .tag(tool)
+                ToolPickerButton(tool: tool, number: index + 1, selected: tool == self.tool) {
+                    model.tool = tool
+                }
             }
         }
-        .pickerStyle(.segmented)
-        .labelsHidden()
-        .fixedSize()
+        .padding(2)
+        .background(.fill.tertiary, in: .capsule)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Tools")
     }
 
     var searchRow: some View {

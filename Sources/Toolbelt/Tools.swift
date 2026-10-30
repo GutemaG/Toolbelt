@@ -109,6 +109,8 @@ final class ToolPrefs {
     var panelOrder: [Tool] { didSet { changed() } }
     var showMainIcon: Bool { didSet { changed() } }
     var showInDock: Bool { didSet { changed() } }
+    /// Resting the pointer on a Toolbelt menu bar icon opens its window, like Notchy's notch.
+    var openOnHover: Bool { didSet { changed() } }
 
     /// Called after every change; AppDelegate applies it to the menu bar, shortcuts and Dock.
     @ObservationIgnored var onChange: (() -> Void)?
@@ -132,6 +134,7 @@ final class ToolPrefs {
         panelOrder = order + added.filter { !order.contains($0) }
         showMainIcon = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.showMainIcon") as? Bool ?? true)
         showInDock = Store.isOverridden ? false : UserDefaults.standard.bool(forKey: "tools.showInDock")
+        openOnHover = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.openOnHover") as? Bool ?? true)
     }
 
     /// Tools this version has that a saved order from an older version lacks.
@@ -169,6 +172,7 @@ final class ToolPrefs {
             defaults.set(Tool.allCases.map(\.rawValue), forKey: "tools.known")
             defaults.set(showMainIcon, forKey: "tools.showMainIcon")
             defaults.set(showInDock, forKey: "tools.showInDock")
+            defaults.set(openOnHover, forKey: "tools.openOnHover")
         }
         onChange?()
     }

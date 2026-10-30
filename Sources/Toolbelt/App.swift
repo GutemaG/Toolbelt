@@ -156,6 +156,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     let tool: Tool?
     private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
     private let popover = NSPopover()
+    /// Hover opening: the pending open, and the watch that closes a peek
+    /// once the pointer leaves the icon and the window.
+    private var hoverTask: Task<Void, Never>?
+    private var leaveWatch: Task<Void, Never>?
 
     init(model: AppModel, tool: Tool?) {
         self.model = model
@@ -171,6 +175,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
             button.target = self
             button.action = #selector(clicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+            button.addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeAlways, .inVisibleRect],
+                                                  owner: self))
         }
         popover.behavior = .transient
         popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
@@ -201,9 +207,57 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         NSStatusBar.system.removeStatusItem(item)
     }
 
+    // MARK: Open on hover
+
+    @objc(mouseEntered:) func mouseEntered(with event: NSEvent) {
+        guard ToolPrefs.shared.openOnHover, !popover.isShown else { return }
+        hoverTask?.cancel()
+        hoverTask = Task { [weak self] in
+            // A short rest, so passing over the menu bar does not open it.
+            try? await Task.sleep(for: .milliseconds(250))
+            guard let self, !Task.isCancelled, !self.popover.isShown else { return }
+            self.showPopover(activating: false)
+            self.watchForLeaving()
+        }
+    }
+
+    @objc(mouseExited:) func mouseExited(with event: NSEvent) {
+        hoverTask?.cancel()
+    }
+
+    /// Closes a peek when the pointer has been away from the icon and the
+    /// window for about half a second. A click inside makes it stay.
+    private func watchForLeaving() {
+        leaveWatch?.cancel()
+        leaveWatch = Task { [weak self] in
+            var away = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(150))
+                guard let self, self.popover.isShown else { return }
+                if NSApp.isActive, self.popover.contentViewController?.view.window?.isKeyWindow == true { return }
+                let mouse = NSEvent.mouseLocation
+                let inside = [self.popover.contentViewController?.view.window?.frame, self.buttonFrame]
+                    .compactMap { $0?.insetBy(dx: -Space.sm, dy: -Space.sm) }
+                    .contains { $0.contains(mouse) }
+                away = inside ? 0 : away + 1
+                if away >= 3 { return self.closePopover() }
+            }
+        }
+    }
+
+    private var buttonFrame: CGRect? {
+        guard let button = item.button, let window = button.window else { return nil }
+        return window.convertToScreen(button.convert(button.bounds, to: nil))
+    }
+
     @objc private func clicked(_ sender: NSStatusBarButton) {
         if NSApp.currentEvent?.type == .rightMouseUp {
             showMenu()
+        } else if popover.isShown, !NSApp.isActive {
+            // Opened by hover: a click turns the peek into a normal, focused window.
+            leaveWatch?.cancel()
+            NSApp.activate()
+            popover.contentViewController?.view.window?.makeKey()
         } else if popover.isShown {
             closePopover()
         } else {
@@ -211,17 +265,20 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
     }
 
-    func showPopover() {
+    /// `activating: false` is the hover peek: the app you were typing in keeps focus.
+    func showPopover(activating: Bool = true) {
         guard let button = item.button else { return }
+        hoverTask?.cancel()
+        if activating { leaveWatch?.cancel() }
         PanelController.shared.hide()
         StatusItems.shared?.closePopovers()
         if let tool { model.tool = tool }
         model.openCount += 1
         // Window snapping acts on the app that was in front before the popover.
         if let front = NSWorkspace.shared.frontmostApplication, front != .current { WindowSnapper.shared.previousApp = front }
-        NSApp.activate()
+        if activating { NSApp.activate() }
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-        popover.contentViewController?.view.window?.makeKey()
+        if activating { popover.contentViewController?.view.window?.makeKey() }
     }
 
     func closePopover() {

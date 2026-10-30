@@ -209,6 +209,10 @@ struct GeneralSettings: View {
                      : "One icon with every tool. Tools with their own icon stay either way.")
             }
             .disabled(prefs.showMainIcon && prefs.ownIcon.intersection(prefs.enabled).isEmpty)
+            Toggle(isOn: $prefs.openOnHover) {
+                Text("Open when the pointer rests on the icon")
+                Text("Peeks without taking focus; click inside to type. Moving away closes it.")
+            }
             Toggle(isOn: $prefs.showInDock) {
                 Text("Show Toolbelt in the Dock")
                 Text("Also shows Toolbelt in ⌘Tab.")
