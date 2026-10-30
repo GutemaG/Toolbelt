@@ -92,11 +92,13 @@ final class ToolPrefs {
         // A tool missing from the saved order came with a later version: it
         // starts on and in the panel, at the end, instead of staying hidden.
         let order = tools("tools.panelOrder", Tool.allCases)
-        let added = Self.newTools(savedOrder: order)
+        // "tools.known" lists every tool the last saved version had. Older
+        // versions did not save it; their order is the best guess.
+        let added = Self.newTools(savedOrder: tools("tools.known", order))
         enabled = Set(tools("tools.enabled", Tool.allCases) + added)
         ownIcon = Set(tools("tools.ownIcon", []))
         inPanel = Set(tools("tools.inPanel", Tool.allCases) + added)
-        panelOrder = order + added
+        panelOrder = order + added.filter { !order.contains($0) }
         showMainIcon = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.showMainIcon") as? Bool ?? true)
         showInDock = Store.isOverridden ? false : UserDefaults.standard.bool(forKey: "tools.showInDock")
     }
@@ -133,6 +135,7 @@ final class ToolPrefs {
             defaults.set(ownIcon.map(\.rawValue), forKey: "tools.ownIcon")
             defaults.set(inPanel.map(\.rawValue), forKey: "tools.inPanel")
             defaults.set(panelOrder.map(\.rawValue), forKey: "tools.panelOrder")
+            defaults.set(Tool.allCases.map(\.rawValue), forKey: "tools.known")
             defaults.set(showMainIcon, forKey: "tools.showMainIcon")
             defaults.set(showInDock, forKey: "tools.showInDock")
         }
