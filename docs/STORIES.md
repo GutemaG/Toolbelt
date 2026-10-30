@@ -401,7 +401,7 @@ Acceptance:
 - [manual] The screen freezes, a crosshair and live size label follow the pointer; Escape cancels.
 - [unit] The saved PNG is at Retina pixel size of the selection.
 - [manual] The image is on the clipboard and in the save folder (default Desktop) named "Toolbelt <date> at <time>.png".
-Status: todo
+Status: done
 
 ### S-041 Capture a window or the whole screen
 As the user, during selection I press Space to pick a window by hovering, or use the full-screen shortcut.
@@ -409,7 +409,7 @@ Depends: S-040
 Acceptance:
 - [manual] Space toggles window mode with a highlight on the hovered window; click captures it with its shadow off by default.
 - [manual] The full-screen shortcut captures the display under the pointer.
-Status: todo
+Status: done
 
 ### S-042 Act on a capture from the preview
 As the user, after a capture a small preview appears in a corner where I can copy, save, show in Finder, drag it out, or close it.
@@ -418,7 +418,7 @@ Depends: S-040
 Acceptance:
 - [snap] Preview shows the thumbnail and buttons; it hides after 6 seconds unless hovered.
 - [manual] Dragging the thumbnail into another app drops the image.
-Status: todo
+Status: done
 
 ### S-043 Choose screenshot options
 As the user, I set the save folder, file format (PNG/JPEG/HEIC), copy-to-clipboard, show preview, and include cursor.
@@ -427,7 +427,7 @@ Depends: S-040
 Acceptance:
 - [snap] Options are on the Screenshots page.
 - [unit] File names and formats follow the options.
-Status: todo
+Status: done
 
 ## V2-M3 Recording
 
@@ -438,14 +438,14 @@ Depends: S-040
 Acceptance:
 - [manual] A 3-2-1 countdown, then recording; the selected area keeps a thin outline that is not in the video.
 - [manual] The file plays in QuickTime at the selection's pixel size.
-Status: todo
+Status: doing (no 3-2-1 countdown yet)
 
 ### S-051 Stop a recording from the menu bar
 As the user, the menu bar shows a stop button with elapsed time while recording; clicking it or pressing the shortcut again stops and saves.
 Depends: S-050
 Acceptance:
 - [manual] The timer updates every second; stop saves within a second and shows the capture preview.
-Status: todo
+Status: done
 
 ### S-052 Choose recording options
 As the user, I turn on system audio, microphone, show clicks and show cursor, and pick MP4 or MOV.
@@ -454,7 +454,7 @@ Depends: S-050
 Acceptance:
 - [manual] With microphone on, macOS asks for microphone access once; the file has audio.
 - [snap] Options are on the Recording page.
-Status: todo
+Status: done (MP4 only, no MOV choice)
 
 ## V2-M4 Small tools
 

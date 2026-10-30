@@ -52,6 +52,8 @@ struct SettingsView: View {
             case .settings: GeneralSettings()
             case .launcher: ToolSettings(tool: .launcher)
             case .clipboard: ToolSettings(tool: .clipboard)
+            case .screenshots: ToolSettings(tool: .screenshots)
+            case .recording: ToolSettings(tool: .recording)
             case .appearance: AppearanceSettings()
             }
         }
@@ -62,7 +64,7 @@ struct SettingsView: View {
 
 /// Sidebar groups, in order. The first has no heading.
 enum SettingsGroup: String, CaseIterable, Identifiable {
-    case top, input, app
+    case top, input, capture, app
 
     var id: String { rawValue }
 
@@ -70,6 +72,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
         switch self {
         case .top: ""
         case .input: "Input"
+        case .capture: "Capture"
         case .app: "App"
         }
     }
@@ -77,7 +80,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, appearance
+    case settings, launcher, clipboard, screenshots, recording, appearance
 
     var id: String { rawValue }
 
@@ -87,6 +90,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: .top
         case .launcher, .clipboard: .input
+        case .screenshots, .recording: .capture
         case .appearance: .app
         }
     }
@@ -164,7 +168,7 @@ struct GeneralSettings: View {
                 open("Privacy_Accessibility")
             }
             PermissionRow(symbol: "record.circle", title: "Screen Recording",
-                          detail: "Screenshots and screen recordings, when those tools arrive.",
+                          detail: "Screenshots and screen recordings.",
                           isOn: screenRecording) {
                 CGRequestScreenCaptureAccess()
                 open("Privacy_ScreenCapture")
@@ -364,6 +368,10 @@ struct ToolSettings: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        case .screenshots:
+            ScreenshotOptions()
+        case .recording:
+            RecordingOptions()
         case .clipboard:
             Section {
                 LabeledContent("History", value: "Last \(ClipRules.historyLimit) clips")
@@ -386,6 +394,117 @@ struct ToolSettings: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text("Pinned clips stay.")
+            }
+        }
+    }
+}
+
+/// Settings > Screenshots: where files go and what they look like.
+private struct ScreenshotOptions: View {
+    @AppStorage(CapturePrefs.folderKey) private var folder = ""
+    @AppStorage(CapturePrefs.formatKey) private var format = ImageFormat.png.rawValue
+    @AppStorage(CapturePrefs.copyKey) private var copy = true
+    @AppStorage(CapturePrefs.previewKey) private var preview = true
+    @AppStorage(CapturePrefs.cursorKey) private var cursor = false
+    @AppStorage(CapturePrefs.shadowKey) private var shadow = false
+
+    var body: some View {
+        Section {
+            SaveFolderRow(folder: $folder)
+            Picker("File format", selection: $format) {
+                ForEach(ImageFormat.allCases) { Text($0.title).tag($0.rawValue) }
+            }
+            Toggle(isOn: $copy) {
+                Text("Copy to the clipboard")
+                Text("Paste the screenshot right away with ⌘V.")
+            }
+            Toggle(isOn: $preview) {
+                Text("Show a preview after capture")
+                Text("A small card in the corner to copy, drag, open or delete it.")
+            }
+            Toggle(isOn: $cursor) {
+                Text("Include the pointer")
+            }
+            Toggle(isOn: $shadow) {
+                Text("Include the window shadow")
+                Text("For window screenshots.")
+            }
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("While selecting: drag for an area, Space to pick a window, Return for the whole screen, Esc to cancel.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+    }
+}
+
+/// Settings > Recording: sound and what the pointer shows.
+private struct RecordingOptions: View {
+    @AppStorage(CapturePrefs.folderKey) private var folder = ""
+    @AppStorage(CapturePrefs.systemAudioKey) private var systemAudio = false
+    @AppStorage(CapturePrefs.microphoneKey) private var microphone = false
+    @AppStorage(CapturePrefs.clicksKey) private var clicks = true
+    @AppStorage(CapturePrefs.recordCursorKey) private var cursor = true
+    @AppStorage(CapturePrefs.previewKey) private var preview = true
+
+    var body: some View {
+        Section {
+            SaveFolderRow(folder: $folder)
+            LabeledContent("File format", value: "MP4 (H.264)")
+            Toggle(isOn: $systemAudio) {
+                Text("Record system audio")
+                Text("Sound from your apps, not from Toolbelt.")
+            }
+            Toggle(isOn: $microphone) {
+                Text("Record the microphone")
+                Text("macOS asks for microphone access the first time.")
+            }
+            Toggle(isOn: $cursor) {
+                Text("Show the pointer")
+            }
+            Toggle(isOn: $clicks) {
+                Text("Show clicks")
+                Text("A ring around the pointer each time you click.")
+            }
+            .disabled(!cursor)
+            Toggle(isOn: $preview) {
+                Text("Show a preview after recording")
+            }
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("Stop with the red timer in the menu bar or ⌃⇧5. The red frame around the area is not in the movie.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+    }
+}
+
+/// The save folder, shared by screenshots and recordings.
+private struct SaveFolderRow: View {
+    @Binding var folder: String
+
+    var body: some View {
+        LabeledContent("Save to") {
+            HStack(spacing: Space.sm) {
+                Text(CapturePrefs.folder.lastPathComponent)
+                    .foregroundStyle(.secondary)
+                    .help(CapturePrefs.folder.path)
+                Button("Choose…") {
+                    let open = NSOpenPanel()
+                    open.canChooseDirectories = true
+                    open.canChooseFiles = false
+                    open.canCreateDirectories = true
+                    open.prompt = "Choose"
+                    open.directoryURL = CapturePrefs.folder
+                    if open.runModal() == .OK, let url = open.url { folder = url.path }
+                }
+                .controlSize(.small)
             }
         }
     }

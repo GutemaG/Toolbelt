@@ -15,4 +15,5 @@
 <key>NSHighResolutionCapable</key><true/>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 <key>LSUIElement</key><true/>
+<key>NSMicrophoneUsageDescription</key><string>Toolbelt records your microphone in screen recordings when you turn on Record microphone.</string>
 </dict></plist>

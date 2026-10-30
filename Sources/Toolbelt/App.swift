@@ -31,6 +31,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // No Dock icon unless Settings says so. Info.plist says so too (LSUIElement), this covers a run from the terminal.
         NSApp.setActivationPolicy(.accessory)
         PanelController.shared = PanelController(model: model)
+        CaptureController.shared = CaptureController(model: model)
+        Recorder.shared = Recorder(model: model)
         statusItems = StatusItems(model: model)
         StatusItems.shared = statusItems
 
@@ -64,6 +66,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             model.clipboard.start()
         } else {
             model.clipboard.stop()
+        }
+        if prefs.enabled.contains(.screenshots) {
+            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_4, modifiers: controlKey | shiftKey) {
+                CaptureController.shared.screenshot(.area)
+            }
+            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_3, modifiers: controlKey | shiftKey) {
+                CaptureController.shared.screenshot(.screen)
+            }
+        }
+        if prefs.enabled.contains(.recording) {
+            Hotkeys.shared.register(Tool.recording.title, keyCode: kVK_ANSI_5, modifiers: controlKey | shiftKey) {
+                Recorder.shared.toggle()
+            }
+        } else if Recorder.shared.isRecording {
+            Recorder.shared.stop()
         }
         if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
 
@@ -279,7 +296,7 @@ enum Store {
 
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: ClipItem.self, AppLaunch.self, configurations: ModelConfiguration(url: url))
+            return try ModelContainer(for: ClipItem.self, AppLaunch.self, Capture.self, configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }

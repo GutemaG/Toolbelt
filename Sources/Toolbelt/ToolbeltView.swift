@@ -18,6 +18,7 @@ struct ToolbeltView: View {
     @Environment(AppModel.self) private var model
     @Query(sort: \ClipItem.copiedAt, order: .reverse) private var clips: [ClipItem]
     @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) private var pinnedLaunches: [AppLaunch]
+    @Query(sort: \Capture.createdAt, order: .reverse) private var captures: [Capture]
     @State private var query = ""
     @State private var selected = 0
     /// Bumped by the arrow keys. Only keyboard moves scroll; hovering never does.
@@ -93,8 +94,21 @@ struct ToolbeltView: View {
     }
 
     private var placeholder: String {
-        if tool == .clipboard { return "Search Clips" }
-        return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
+        switch tool {
+        case .clipboard: return "Search Clips"
+        case .screenshots: return "Search Screenshots"
+        case .recording: return "Search Recordings"
+        case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
+        }
+    }
+
+    private var searchNoun: String {
+        switch tool {
+        case .launcher: "apps"
+        case .clipboard: "clips"
+        case .screenshots: "screenshots"
+        case .recording: "recordings"
+        }
     }
 
     private var results: some View {
@@ -180,7 +194,23 @@ struct ToolbeltView: View {
                 }
             case .clip(let clip):
                 ClipRow(clip: clip, icon: model.apps.icon(bundleID: clip.sourceBundleID), selected: selected)
-            case .add:
+            case .capture(let capture):
+                CaptureThumbnail(capture: capture)
+                    .frame(width: 56, height: 36)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(capture.name)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Text("\(capture.pixelWidth) × \(capture.pixelHeight)" + (capture.kind == .recording ? " · " + CaptureRulesText.duration(capture.duration) : ""))
+                        .font(.caption)
+                        .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+                }
+                Spacer(minLength: Space.sm)
+                Text(capture.createdAt, format: .relative(presentation: .named, unitsStyle: .abbreviated))
+                    .font(.caption)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+                    .fixedSize()
+            case .add, .action:
                 EmptyView()
             }
         }
@@ -211,6 +241,12 @@ struct ToolbeltView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(app.name)
+            case .action(let mode):
+                Image(systemName: Recorder.shared.isRecording && tool == .recording ? "stop.circle.fill" : mode.symbol)
+                    .font(.system(size: 28, weight: .light))
+                    .frame(width: 48, height: 48)
+                Text(Recorder.shared.isRecording && tool == .recording ? "Stop" : mode.title)
+                    .font(.caption)
             default:
                 Image(systemName: "plus")
                     .font(.title2)
@@ -231,9 +267,19 @@ struct ToolbeltView: View {
                 RoundedRectangle(cornerRadius: 12).fill(.quaternary)
             }
         }
-        .help(entry.isApp ? "" : "Pin apps to the top of the Launcher")
+        .help(tileHelp(entry))
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+    }
+
+    private func tileHelp(_ entry: Entry) -> String {
+        switch entry {
+        case .add: return "Pin apps to the top of the Launcher"
+        case .action(let mode):
+            if tool == .recording { return Recorder.shared.isRecording ? "Stop recording (⌃⇧5)" : "Record \(mode.title.lowercased())" }
+            return mode == .screen ? "Capture the whole screen (⌃⇧3)" : "Capture \(mode == .area ? "an area" : "a window") (⌃⇧4)"
+        default: return ""
+        }
     }
 
     @ViewBuilder
@@ -261,6 +307,14 @@ struct ToolbeltView: View {
                 .keyboardShortcut(.delete)
         case .add:
             Button("Add…") { activate(entry, plainText: false) }
+        case .action:
+            EmptyView()
+        case .capture(let capture):
+            Button("Open") { activate(entry, plainText: false) }
+            Button("Copy") { CaptureController.shared.copy(capture) }
+            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([capture.url]) }
+            Divider()
+            Button("Move to Trash", role: .destructive) { CaptureController.shared.delete(capture) }
         }
     }
 
@@ -268,9 +322,7 @@ struct ToolbeltView: View {
     private var emptyState: some View {
         if !query.isEmpty {
             ContentUnavailableView("No Results", systemImage: "magnifyingglass",
-                                   description: Text(tool == .launcher
-                                                     ? "No apps match “\(query)”."
-                                                     : "No clips match “\(query)”."))
+                                   description: Text("No \(searchNoun) match “\(query)”."))
         } else if tool == .clipboard {
             ContentUnavailableView("No Clips Yet", systemImage: "doc.on.clipboard",
                                    description: Text("Copy something and it shows up here."))
@@ -308,6 +360,8 @@ struct ToolbeltView: View {
     private var hint: String {
         switch tool {
         case .launcher: return model.pickingApps ? "↩ Pin or Unpin   esc Done" : "↩ Open   ⌘P Pin"
+        case .screenshots: return "⌃⇧4 Area or Window   ⌃⇧3 Screen   ↩ Open"
+        case .recording: return Recorder.shared.isRecording ? "⌃⇧5 Stop" : "⌃⇧5 Start or Stop   ↩ Open"
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
@@ -321,12 +375,17 @@ struct ToolbeltView: View {
         case clip(ClipItem)
         /// The Add… tile at the end of the pinned apps.
         case add
+        /// Area, Window or Screen in the capture tools.
+        case action(CaptureMode)
+        case capture(Capture)
 
         var id: String {
             switch self {
             case .app(let app): "a:" + app.path
             case .clip(let clip): "c:" + clip.uuid.uuidString
             case .add: "add"
+            case .action(let mode): "m:" + mode.rawValue
+            case .capture(let capture): "f:" + capture.uuid.uuidString
             }
         }
 
@@ -380,6 +439,14 @@ struct ToolbeltView: View {
                     frequent.isEmpty ? nil : Section(title: "Frequent", entries: frequent.map(Entry.app)),
                     Section(title: "Applications", entries: rest.map(Entry.app))]
                 .compactMap { $0 }
+        case .screenshots, .recording:
+            let kind: CaptureKind = tool == .screenshots ? .screenshot : .recording
+            let recent = captures.filter { $0.kind == kind && $0.exists && (query.isEmpty || ClipRules.matches(query, text: $0.name)) }
+            let modes: [CaptureMode] = tool == .recording && Recorder.shared.isRecording ? [.area] : CaptureMode.allCases
+            var result: [Section] = []
+            if query.isEmpty { result.append(Section(title: tool == .screenshots ? "Capture" : "Record", entries: modes.map(Entry.action), grid: true)) }
+            if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.capture))) }
+            return result
         case .clipboard:
             let matching = clips.filter { $0.kind == .image ? query.isEmpty : ClipRules.matches(query, text: $0.text) }
             let pinned = matching.filter(\.isPinned).map(Entry.clip)
@@ -418,6 +485,16 @@ struct ToolbeltView: View {
                 model.copy(clip, plainText: plainText)
                 close()
             }
+        case .action(let mode):
+            close()
+            if tool == .recording {
+                Recorder.shared.isRecording ? Recorder.shared.stop() : Recorder.shared.start(mode)
+            } else {
+                CaptureController.shared.screenshot(mode)
+            }
+        case .capture(let capture):
+            close()
+            NSWorkspace.shared.open(capture.url)
         case .add:
             query = ""
             selected = 0

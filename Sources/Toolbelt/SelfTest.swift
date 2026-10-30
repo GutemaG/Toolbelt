@@ -1,4 +1,6 @@
 import AppKit
+import AVFoundation
+import ScreenCaptureKit
 import SwiftData
 import ToolbeltKit
 
@@ -101,6 +103,37 @@ enum SelfTest {
             // S-015 clear history
             model.clearHistory()
             check("Clear History keeps only pinned clips", clips().allSatisfy(\.isPinned) && !clips().isEmpty)
+
+            // S-040, S-050 capture, only when this run may record the screen
+            if CGPreflightScreenCaptureAccess(), let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true),
+               let display = content.displays.first {
+                let shot = await SelectionOverlay.captureDisplay(display, content: content)
+                check("a screen capture is at Retina size", shot.map { $0.image.width == Int(CGFloat(display.width) * $0.scale) } ?? false,
+                      shot.map { "\($0.image.width) px for \(display.width) pt" } ?? "no image")
+                if let shot {
+                    let area = shot.image.cropping(to: CGRect(x: 0, y: 0, width: 200, height: 100))
+                    if let area { CaptureController.shared.save(area) }
+                    let saved = (try? context.fetch(FetchDescriptor<Capture>()))?.first { $0.kind == .screenshot }
+                    check("a screenshot is saved as a file", saved?.exists == true && saved?.pixelWidth == 200, saved?.path ?? "none")
+                    CapturePreview.shared.hide()
+                }
+                await Recorder.shared.begin(.screen(display))
+                check("recording starts", Recorder.shared.isRecording)
+                try? await Task.sleep(for: .seconds(2))
+                Recorder.shared.stop()
+                for _ in 0..<20 where ((try? context.fetch(FetchDescriptor<Capture>()))?.contains { $0.kind == .recording } ?? false) == false {
+                    try? await Task.sleep(for: .milliseconds(250))
+                }
+                let movie = (try? context.fetch(FetchDescriptor<Capture>()))?.first { $0.kind == .recording }
+                var seconds: Double?
+                if let movie { seconds = try? await AVURLAsset(url: movie.url).load(.duration).seconds }
+                check("a recording is saved as a playable movie", (seconds ?? 0) > 1, movie.map { "\($0.path) \(seconds ?? 0) s" } ?? "none")
+                CapturePreview.shared.hide()
+                // The captures show whatever was on screen; never leave them on disk.
+                try? FileManager.default.removeItem(at: CapturePrefs.folder)
+            } else {
+                print("SKIP capture checks: this run may not record the screen")
+            }
 
             // S-002 secrets
             check("password manager copies are skipped",
