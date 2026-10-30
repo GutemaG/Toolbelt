@@ -41,6 +41,19 @@ enum Snapshot {
                     capture(to: "\(dir)/panel-\(tool.rawValue)-\(mode).png", window: PanelController.shared.panel)
                 }
             }
+            // The Launcher after Add…: every app with a pin button.
+            if only == nil || only?.contains("pick") == true {
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PanelController.shared.show(.launcher)
+                    // Opening resets the view; switch to the pick list after that.
+                    try? await Task.sleep(for: .seconds(0.3))
+                    model.pickingApps = true
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-pick-\(mode).png", window: PanelController.shared.panel)
+                }
+                model.pickingApps = false
+            }
             PanelController.shared.hide()
             if only == nil || only?.contains("settings") == true {
                 SettingsWindow.shared.show(model: model)

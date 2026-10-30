@@ -89,6 +89,8 @@ final class AppModel {
     }
     /// Bumped each time a surface opens, so views reset their search and selection.
     var openCount = 0
+    /// After Add…: the Launcher lists every app with a pin button, until Done.
+    var pickingApps = false
 
     init(container: ModelContainer) {
         self.container = container

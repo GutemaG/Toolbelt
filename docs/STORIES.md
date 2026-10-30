@@ -324,9 +324,11 @@ Acceptance:
 - [self] Add… pins the chosen apps at the end; Move Left/Right reorders; Unpin removes; pinning again adds at the end.
 - [manual] ⌘P or right-click > Pin on any app row pins it; pinned apps leave Frequent and show a pin in search results.
 - [manual] Arrow keys move through the grid by column and row; Return opens the selected app.
+- [snap] Add… switches the Launcher to "Choose Apps to Pin": every app with a pin button, search, Other App… and Done; nothing closes while picking.
+- [manual] A pin button shows on the hovered or selected app row; dragging an app from Finder or the Dock onto the grid pins it.
 UX:
-- Flow: ⌘P on a row, right-click > Pin, or Add… > choose apps > Pin -> tile appears at the end of the grid -> right-click a tile > Move Left / Move Right / Unpin / Show in Finder
-- Surface: grid section inside the Launcher list (a place people come back to); Add… uses the system Open panel
+- Flow: pin button on a row, ⌘P, right-click > Pin, drag onto the grid, or Add… > click apps in the pick list > Done (esc) -> tile appears at the end of the grid -> right-click a tile > Move Left / Move Right / Unpin / Show in Finder
+- Surface: grid section inside the Launcher list (a place people come back to); Add… turns the list into a pick list in place (inline), Other App… uses the system Open panel
 - States: no pinned apps shows only the Add… tile; an app that was moved or deleted drops out of the grid
 - Words: "Pinned", "Add…", "Pin", "Unpin", "Move Left", "Move Right", "Show in Finder"; Open panel title "Pin Apps", button "Pin"; Add… tooltip "Pin apps to the top of the Launcher"
 - Access: tiles are buttons that read the app name; arrows, Return and ⌘P work without a mouse

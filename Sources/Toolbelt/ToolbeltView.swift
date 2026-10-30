@@ -43,6 +43,7 @@ struct ToolbeltView: View {
         .onChange(of: model.tool) {
             query = ""
             selected = 0
+            model.pickingApps = false
             if model.tool == .launcher { model.apps.refresh() }
         }
         .onChange(of: query) { selected = 0 }
@@ -56,7 +57,7 @@ struct ToolbeltView: View {
             Image(systemName: "magnifyingglass")
                 .font(.title2)
                 .foregroundStyle(.secondary)
-            TextField(model.tool == .launcher ? "Search Apps" : "Search Clips", text: $query)
+            TextField(placeholder, text: $query)
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .focused($searchFocused)
@@ -82,6 +83,11 @@ struct ToolbeltView: View {
         }
         .padding(.horizontal, Space.lg)
         .padding(.vertical, Space.md)
+    }
+
+    private var placeholder: String {
+        if model.tool == .clipboard { return "Search Clips" }
+        return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
     }
 
     private var results: some View {
@@ -111,6 +117,12 @@ struct ToolbeltView: View {
                                         .onHover { if $0 { selected = start + offset } }
                                         .contextMenu { menu(for: entry) }
                                 }
+                            }
+                            // Drag apps from Finder or the Dock onto the grid to pin them.
+                            .dropDestination(for: URL.self) { urls, _ in
+                                let apps = urls.filter { $0.pathExtension == "app" }.map(\.path)
+                                model.pinApps(paths: apps)
+                                return !apps.isEmpty
                             }
                         } else {
                             ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
@@ -149,10 +161,15 @@ struct ToolbeltView: View {
                     .truncationMode(.tail)
                     .help(app.name)
                 Spacer(minLength: 0)
-                if pinnedPaths.contains(app.path) {
-                    Image(systemName: "pin.fill")
-                        .font(.caption)
-                        .accessibilityLabel("Pinned")
+                let pinned = pinnedPaths.contains(app.path)
+                if pinned || selected || model.pickingApps {
+                    Button(pinned ? "Unpin" : "Pin", systemImage: pinned ? "pin.fill" : "pin") {
+                        model.togglePin(appPath: app.path)
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : (pinned ? AnyShapeStyle(Palette.accentText) : AnyShapeStyle(.secondary)))
+                    .help(pinned ? "Unpin from the top of the Launcher (⌘P)" : "Pin to the top of the Launcher (⌘P)")
                 }
             case .clip(let clip):
                 ClipRow(clip: clip, icon: model.apps.icon(bundleID: clip.sourceBundleID), selected: selected)
@@ -261,6 +278,13 @@ struct ToolbeltView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
             Spacer()
+            if model.pickingApps {
+                Button("Other App…") { chooseAppsToPin() }
+                    .help("Choose an app outside the Applications folders")
+                Button("Done") { stopPicking() }
+                    .buttonStyle(.borderedProminent)
+                    .help("Go back to the Launcher (esc)")
+            }
             Button("Settings", systemImage: "gearshape") { openSettings() }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -276,7 +300,7 @@ struct ToolbeltView: View {
 
     private var hint: String {
         switch model.tool {
-        case .launcher: return "↩ Open   ⌘P Pin"
+        case .launcher: return model.pickingApps ? "↩ Pin or Unpin   esc Done" : "↩ Open   ⌘P Pin"
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
@@ -330,6 +354,11 @@ struct ToolbeltView: View {
         switch model.tool {
         case .launcher:
             let candidates = model.launchCandidates()
+            if model.pickingApps {
+                let searching = !query.trimmingCharacters(in: .whitespaces).isEmpty
+                let apps = searching ? LauncherRanking.rank(candidates, query: query) : candidates
+                return [Section(title: "Choose Apps to Pin", entries: apps.map(Entry.app))]
+            }
             let ranked = LauncherRanking.rank(candidates, query: query)
             if !query.trimmingCharacters(in: .whitespaces).isEmpty {
                 return [Section(entries: ranked.map(Entry.app))]
@@ -359,6 +388,7 @@ struct ToolbeltView: View {
     // MARK: Actions
 
     private func reset() {
+        model.pickingApps = false
         query = ""
         selected = 0
         model.apps.refresh()
@@ -368,6 +398,10 @@ struct ToolbeltView: View {
     private func activate(_ entry: Entry, plainText: Bool) {
         switch entry {
         case .app(let app):
+            if model.pickingApps {
+                model.togglePin(appPath: app.path)
+                return
+            }
             close()
             model.open(app)
         case .clip(let clip):
@@ -378,13 +412,25 @@ struct ToolbeltView: View {
                 close()
             }
         case .add:
-            chooseAppsToPin()
+            query = ""
+            selected = 0
+            model.pickingApps = true
+            searchFocused = true
         }
+    }
+
+    private func stopPicking() {
+        model.pickingApps = false
+        query = ""
+        selected = 0
+        searchFocused = true
     }
 
     /// Add…: pick apps in an Open panel and pin them.
     private func chooseAppsToPin() {
-        close()
+        // The popover closes by itself when the Open panel takes focus.
+        if surface == .panel { close() }
+        NSApp.unhide(nil)
         NSApp.activate()
         let open = NSOpenPanel()
         open.title = "Pin Apps"
@@ -393,9 +439,12 @@ struct ToolbeltView: View {
         open.allowedContentTypes = [.application]
         open.allowsMultipleSelection = true
         open.directoryURL = URL(fileURLWithPath: "/Applications")
-        guard open.runModal() == .OK else { return }
-        model.pinApps(paths: open.urls.map(\.path))
-        if surface == .panel { PanelController.shared.show(.launcher) }
+        if open.runModal() == .OK { model.pinApps(paths: open.urls.map(\.path)) }
+        // Come back to the Launcher so the new tiles are in view.
+        switch surface {
+        case .panel: PanelController.shared.show(.launcher)
+        case .popover: StatusItemController.shared?.showPopover()
+        }
     }
 
     private func close() {
@@ -446,7 +495,7 @@ struct ToolbeltView: View {
         case (36, _), (76, _): // Return, Enter
             if let current { activate(current, plainText: flags.contains(.option)) }
         case (53, _): // Escape
-            if query.isEmpty { close() } else { query = "" }
+            if !query.isEmpty { query = "" } else if model.pickingApps { stopPicking() } else { close() }
         case (48, false): // Tab switches tool
             model.tool = model.tool == .launcher ? .clipboard : .launcher
         case (18, true): model.tool = .launcher   // Command-1

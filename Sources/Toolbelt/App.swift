@@ -90,12 +90,17 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         } else if popover.isShown {
             closePopover()
         } else {
-            PanelController.shared.hide()
-            model.openCount += 1
-            NSApp.activate()
-            popover.show(relativeTo: sender.bounds, of: sender, preferredEdge: .minY)
-            popover.contentViewController?.view.window?.makeKey()
+            showPopover()
         }
+    }
+
+    func showPopover() {
+        guard let button = item.button else { return }
+        PanelController.shared.hide()
+        model.openCount += 1
+        NSApp.activate()
+        popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+        popover.contentViewController?.view.window?.makeKey()
     }
 
     func closePopover() {
@@ -104,7 +109,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
 
     /// Hand focus back to the app that was in front before the popover opened.
     func popoverDidClose(_ notification: Notification) {
-        if !SettingsWindow.shared.isVisible { NSApp.hide(nil) }
+        // Not while an Open panel (Other App…) or Settings is up: hiding would close it.
+        if !SettingsWindow.shared.isVisible, NSApp.modalWindow == nil { NSApp.hide(nil) }
     }
 
     private func showMenu() {
