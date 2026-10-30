@@ -459,8 +459,10 @@ struct ToolbeltView: View {
                 .compactMap { $0 }
         default:
             var result: [Section] = []
-            if let grid = ToolActions.grid(for: tool, model: model) {
-                let actions = grid.actions.filter { query.isEmpty || ClipRules.matches(query, text: $0.title) }
+            if let grid = ToolActions.grid(for: tool, model: model, query: query) {
+                // The Timer reads the search field as a length; other tools filter by name.
+                let typedLength = tool == .timer && TimerRules.parse(query) != nil
+                let actions = grid.actions.filter { query.isEmpty || typedLength || ClipRules.matches(query, text: $0.title) }
                 if !actions.isEmpty { result.append(Section(title: grid.title, entries: actions.map(Entry.action), grid: true)) }
             }
             switch tool {

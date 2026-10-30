@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, screenshots, recording, colors, windows, keepAwake
+    case launcher, clipboard, screenshots, recording, colors, windows, timer, keepAwake
 
     var id: String { rawValue }
 
@@ -16,6 +16,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .recording: "Recording"
         case .colors: "Colors"
         case .windows: "Windows"
+        case .timer: "Timer"
         case .keepAwake: "Keep Awake"
         }
     }
@@ -28,6 +29,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .recording: "record.circle"
         case .colors: "eyedropper"
         case .windows: "rectangle.split.2x1"
+        case .timer: "timer"
         case .keepAwake: "cup.and.saucer"
         }
     }
@@ -41,6 +43,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .recording: "Record an area, a window or the screen to a movie."
         case .colors: "Pick any color on the screen and copy it."
         case .windows: "Snap the front window to halves, thirds or full size."
+        case .timer: "Count down, with the time left in the menu bar."
         case .keepAwake: "Stop the Mac from sleeping for a while."
         }
     }
@@ -54,6 +57,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .recording: .red
         case .colors: .teal
         case .windows: .indigo
+        case .timer: .green
         case .keepAwake: .brown
         }
     }
@@ -66,6 +70,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .recording: "Record the screen"
         case .colors: "Pick a color"
         case .windows: "Snap windows"
+        case .timer: "Start a timer"
         case .keepAwake: "Keep the Mac awake"
         }
     }

@@ -56,6 +56,7 @@ struct SettingsView: View {
             case .recording: ToolSettings(tool: .recording)
             case .colors: ToolSettings(tool: .colors)
             case .windows: ToolSettings(tool: .windows)
+            case .timer: ToolSettings(tool: .timer)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -85,7 +86,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, screenshots, recording, colors, windows, keepAwake, appearance
+    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -97,7 +98,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
-        case .keepAwake: .tools
+        case .timer, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -390,6 +391,13 @@ struct ToolSettings: View {
             WindowOptions()
         case .keepAwake:
             KeepAwakeOptions()
+        case .timer:
+            Section {
+            } footer: {
+                Text("Type any length in the Timer's search field, like 12, 90s or 1h30m. When time is up you hear a chime and see a notification.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .recording:
             RecordingOptions()
         case .clipboard:

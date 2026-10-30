@@ -147,3 +147,16 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(!KeyCombo(keyCode: 0, modifiers: KeyCombo.shift).isUsable)
     #expect(KeyCombo(keyCode: 122, modifiers: 0).isUsable)
 }
+
+@Test func timerInput() {
+    #expect(TimerRules.parse("12") == 720)
+    #expect(TimerRules.parse("12m") == 720)
+    #expect(TimerRules.parse("90s") == 90)
+    #expect(TimerRules.parse("1h30m") == 5400)
+    #expect(TimerRules.parse("1:30") == 90)
+    #expect(TimerRules.parse("0") == nil)
+    #expect(TimerRules.parse("tea") == nil)
+    #expect(TimerRules.parse("5x") == nil)
+    #expect(TimerRules.title(5400) == "1 h 30 min")
+    #expect(TimerRules.title(45) == "45 s")
+}

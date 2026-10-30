@@ -69,6 +69,12 @@ final class AppModel {
     var awakeUntil: Date?
     /// The length last started, so its tile shows as on.
     var awakeLength: TimeInterval?
+    /// Timer: when it ends, the seconds left while paused, its full length,
+    /// and a counter bumped every second so views redraw.
+    var timerEnd: Date?
+    var timerPausedLeft: TimeInterval?
+    var timerLength: TimeInterval = 0
+    var timerTick = 0
     /// Colors picked, newest first, as "#RRGGBB".
     var recentColors: [String] = []
 

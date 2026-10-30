@@ -157,6 +157,20 @@ enum SelfTest {
             KeepAwake.shared.stop()
             check("Turn Off releases it", !KeepAwake.shared.isOn && model.awakeUntil == nil)
 
+            // S-070 timer
+            TimerTool.shared.start(2)
+            check("a timer counts down", TimerTool.shared.isRunning && TimerTool.shared.remaining > 1)
+            TimerTool.shared.pause()
+            let paused = TimerTool.shared.remaining
+            try? await Task.sleep(for: .seconds(1.2))
+            check("a paused timer holds its time", TimerTool.shared.remaining == paused)
+            TimerTool.shared.add(60)
+            check("+1 min adds a minute", TimerTool.shared.remaining == paused + 60)
+            TimerTool.shared.stop()
+            TimerTool.shared.start(1)
+            try? await Task.sleep(for: .seconds(2.5))
+            check("a timer ends by itself", !TimerTool.shared.isRunning)
+
             // S-060 colors
             ColorPicker.shared.remember(RGB(r: 255, g: 128, b: 0))
             ColorPicker.shared.remember(RGB(r: 0, g: 0, b: 0))

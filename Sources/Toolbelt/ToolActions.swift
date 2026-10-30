@@ -19,7 +19,7 @@ struct ToolAction: Identifiable {
 @MainActor
 enum ToolActions {
     /// The grid title and tiles, or nil for tools with their own list (Launcher, Clipboard).
-    static func grid(for tool: Tool, model: AppModel) -> (title: String, actions: [ToolAction])? {
+    static func grid(for tool: Tool, model: AppModel, query: String = "") -> (title: String, actions: [ToolAction])? {
         switch tool {
         case .launcher, .clipboard:
             return nil
@@ -55,6 +55,32 @@ enum ToolActions {
                     WindowSnapper.shared.snap(position)
                 }
             })
+        case .timer:
+            let timer = TimerTool.shared!
+            // Reading the tick makes the view redraw the time left every second.
+            _ = model.timerTick
+            if timer.isRunning {
+                let left = (timer.isPaused ? "Paused, " : "") + CaptureRules.elapsed(Int(timer.remaining.rounded(.up))) + " left"
+                return (left, [
+                    timer.isPaused
+                        ? ToolAction(id: "timer.resume", title: "Resume", symbol: "play.fill", help: "Keep counting down", closes: false) { timer.resume() }
+                        : ToolAction(id: "timer.pause", title: "Pause", symbol: "pause.fill", help: "Pause the timer", closes: false) { timer.pause() },
+                    ToolAction(id: "timer.add1", title: "+1 min", symbol: "plus.circle", help: "Add a minute", closes: false) { timer.add(60) },
+                    ToolAction(id: "timer.add5", title: "+5 min", symbol: "goforward.5", help: "Add five minutes", closes: false) { timer.add(300) },
+                    ToolAction(id: "timer.stop", title: "Stop", symbol: "stop.fill", help: "Stop the timer", closes: false) { timer.stop() },
+                ])
+            }
+            var lengths: [TimeInterval] = [60, 300, 600, 900, 1500, 2700, 3600]
+            // A length typed in the search field ("12", "90s", "1h30m") comes first.
+            if let typed = TimerRules.parse(query) { lengths = [typed] }
+            return ("Start a timer", lengths.map { length in
+                ToolAction(id: "timer.\(Int(length))", title: TimerRules.title(length),
+                           symbol: length == 1500 ? "brain.head.profile" : "timer",
+                           help: length == 1500 ? "A 25-minute focus session" : "Count down \(TimerRules.title(length))",
+                           closes: false) {
+                    timer.start(length)
+                }
+            })
         case .keepAwake:
             let on = model.awakeUntil != nil
             let lengths: [(String, String, TimeInterval?)] = [
@@ -87,6 +113,7 @@ enum ToolActions {
         case .recording: return model.isRecording ? "\(ShortcutID.record.label) Stop" : "\(ShortcutID.record.label) Start or Stop   ↩ Open"
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
+        case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"
         }
     }

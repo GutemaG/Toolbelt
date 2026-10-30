@@ -36,6 +36,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         Recorder.shared = Recorder(model: model)
         KeepAwake.shared = KeepAwake(model: model)
         ColorPicker.shared = ColorPicker(model: model)
+        TimerTool.shared = TimerTool(model: model)
         PanelController.shared = PanelController(model: model)
         statusItems = StatusItems(model: model)
         StatusItems.shared = statusItems
@@ -132,6 +133,14 @@ final class StatusItems {
     /// Keep Awake's own icon fills while it is on.
     func refreshIcons() {
         tools[.keepAwake]?.setSymbol(KeepAwake.shared.isOn ? "cup.and.saucer.fill" : Tool.keepAwake.symbol)
+        // The time left sits on the Timer's own icon, or on the Toolbelt icon without one.
+        let text = TimerTool.shared?.menuBarText
+        if let timerItem = tools[.timer] {
+            timerItem.setTitle(text)
+            main?.setTitle(nil)
+        } else {
+            main?.setTitle(text)
+        }
     }
 
     /// Shows the Toolbelt popover, or the first tool icon when it is hidden.
@@ -172,6 +181,15 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
                 .modelContainer(model.container)
                 .themed()
         )
+    }
+
+    /// Text beside the icon, like a timer's time left. nil shows the icon alone.
+    func setTitle(_ text: String?) {
+        guard let button = item.button else { return }
+        button.title = text.map { " " + $0 } ?? ""
+        button.imagePosition = text == nil ? .imageOnly : .imageLeading
+        item.length = text == nil ? NSStatusItem.squareLength : NSStatusItem.variableLength
+        if text != nil { button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular) }
     }
 
     func setSymbol(_ symbol: String) {
