@@ -28,6 +28,8 @@ struct ToolbeltView: View {
     @FocusState private var searchFocused: Bool
 
     private var tool: Tool { fixedTool ?? model.tool }
+    /// Safe before the recorder exists, which can happen while the app starts.
+    private var isRecording: Bool { Recorder.shared?.isRecording ?? false }
     private var panelTools: [Tool] { ToolPrefs.shared.panelTools }
 
     var body: some View {
@@ -242,10 +244,10 @@ struct ToolbeltView: View {
                     .truncationMode(.tail)
                     .help(app.name)
             case .action(let mode):
-                Image(systemName: Recorder.shared.isRecording && tool == .recording ? "stop.circle.fill" : mode.symbol)
+                Image(systemName: isRecording && tool == .recording ? "stop.circle.fill" : mode.symbol)
                     .font(.system(size: 28, weight: .light))
                     .frame(width: 48, height: 48)
-                Text(Recorder.shared.isRecording && tool == .recording ? "Stop" : mode.title)
+                Text(isRecording && tool == .recording ? "Stop" : mode.title)
                     .font(.caption)
             default:
                 Image(systemName: "plus")
@@ -276,7 +278,7 @@ struct ToolbeltView: View {
         switch entry {
         case .add: return "Pin apps to the top of the Launcher"
         case .action(let mode):
-            if tool == .recording { return Recorder.shared.isRecording ? "Stop recording (⌃⇧5)" : "Record \(mode.title.lowercased())" }
+            if tool == .recording { return isRecording ? "Stop recording (⌃⇧5)" : "Record \(mode.title.lowercased())" }
             return mode == .screen ? "Capture the whole screen (⌃⇧3)" : "Capture \(mode == .area ? "an area" : "a window") (⌃⇧4)"
         default: return ""
         }
@@ -361,7 +363,7 @@ struct ToolbeltView: View {
         switch tool {
         case .launcher: return model.pickingApps ? "↩ Pin or Unpin   esc Done" : "↩ Open   ⌘P Pin"
         case .screenshots: return "⌃⇧4 Area or Window   ⌃⇧3 Screen   ↩ Open"
-        case .recording: return Recorder.shared.isRecording ? "⌃⇧5 Stop" : "⌃⇧5 Start or Stop   ↩ Open"
+        case .recording: return isRecording ? "⌃⇧5 Stop" : "⌃⇧5 Start or Stop   ↩ Open"
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
@@ -442,7 +444,7 @@ struct ToolbeltView: View {
         case .screenshots, .recording:
             let kind: CaptureKind = tool == .screenshots ? .screenshot : .recording
             let recent = captures.filter { $0.kind == kind && $0.exists && (query.isEmpty || ClipRules.matches(query, text: $0.name)) }
-            let modes: [CaptureMode] = tool == .recording && Recorder.shared.isRecording ? [.area] : CaptureMode.allCases
+            let modes: [CaptureMode] = tool == .recording && isRecording ? [.area] : CaptureMode.allCases
             var result: [Section] = []
             if query.isEmpty { result.append(Section(title: tool == .screenshots ? "Capture" : "Record", entries: modes.map(Entry.action), grid: true)) }
             if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.capture))) }
@@ -488,7 +490,7 @@ struct ToolbeltView: View {
         case .action(let mode):
             close()
             if tool == .recording {
-                Recorder.shared.isRecording ? Recorder.shared.stop() : Recorder.shared.start(mode)
+                isRecording ? Recorder.shared?.stop() : Recorder.shared?.start(mode)
             } else {
                 CaptureController.shared.screenshot(mode)
             }

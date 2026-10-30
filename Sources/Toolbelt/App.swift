@@ -30,9 +30,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         // No Dock icon unless Settings says so. Info.plist says so too (LSUIElement), this covers a run from the terminal.
         NSApp.setActivationPolicy(.accessory)
-        PanelController.shared = PanelController(model: model)
+        // Services first: the panel and popovers draw the last used tool at once, and the capture tools read these.
         CaptureController.shared = CaptureController(model: model)
         Recorder.shared = Recorder(model: model)
+        PanelController.shared = PanelController(model: model)
         statusItems = StatusItems(model: model)
         StatusItems.shared = statusItems
 
