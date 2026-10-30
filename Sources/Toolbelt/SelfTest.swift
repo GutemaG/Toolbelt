@@ -121,9 +121,10 @@ enum SelfTest {
                     CapturePreview.shared.hide()
                 }
                 await Recorder.shared.begin(.screen(display))
-                check("recording starts", Recorder.shared.isRecording)
+                check("recording starts", Recorder.shared.isRecording && model.isRecording)
                 try? await Task.sleep(for: .seconds(2))
                 Recorder.shared.stop()
+                check("Record/Stop follows the recorder", !model.isRecording)
                 for _ in 0..<20 where ((try? context.fetch(FetchDescriptor<Capture>()))?.contains { $0.kind == .recording } ?? false) == false {
                     try? await Task.sleep(for: .milliseconds(250))
                 }

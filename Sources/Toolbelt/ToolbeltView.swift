@@ -29,7 +29,7 @@ struct ToolbeltView: View {
 
     private var tool: Tool { fixedTool ?? model.tool }
     /// Safe before the recorder exists, which can happen while the app starts.
-    private var isRecording: Bool { Recorder.shared?.isRecording ?? false }
+    private var isRecording: Bool { model.isRecording }
     private var panelTools: [Tool] { ToolPrefs.shared.panelTools }
 
     var body: some View {
@@ -136,8 +136,7 @@ struct ToolbeltView: View {
         Button(action: action) {
             Label(title, systemImage: symbol)
         }
-        .buttonStyle(.bordered)
-        .controlSize(.small)
+        .buttonStyle(QuickActionStyle())
         .help(help)
     }
 
@@ -759,5 +758,27 @@ struct WindowReader: NSViewRepresentable {
             let window = window
             DispatchQueue.main.async { [found] in found?(window) }
         }
+    }
+}
+
+/// The capture buttons under the Launcher search: full-contrast text on a
+/// tinted fill. The system bordered style washes out on the glass panel and
+/// in the popover, so these draw their own fill and hover state.
+private struct QuickActionStyle: ButtonStyle {
+    @State private var hovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.callout.weight(.medium))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, Space.md)
+            .padding(.vertical, Space.xs + 2)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(hovering || configuration.isPressed ? AnyShapeStyle(.tint.opacity(0.25)) : AnyShapeStyle(.fill.secondary))
+            }
+            .contentShape(.rect)
+            .onHover { hovering = $0 }
+            .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }

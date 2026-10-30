@@ -63,6 +63,8 @@ final class AppModel {
     var openCount = 0
     /// After Add…: the Launcher lists every app with a pin button, until Done.
     var pickingApps = false
+    /// Set by Recorder, so every view's Record/Stop button follows it.
+    var isRecording = false
 
     init(container: ModelContainer) {
         self.container = container

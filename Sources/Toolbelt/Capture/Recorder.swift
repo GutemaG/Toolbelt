@@ -104,6 +104,7 @@ final class Recorder: NSObject, SCRecordingOutputDelegate, SCStreamDelegate {
             return
         }
         self.stream = stream
+        model.isRecording = true
         self.output = output
         self.url = url
         size = CGSize(width: config.width, height: config.height)
@@ -119,6 +120,7 @@ final class Recorder: NSObject, SCRecordingOutputDelegate, SCStreamDelegate {
             // The recording output finishes the file; the delegate saves it.
         }
         self.stream = nil
+        model.isRecording = false
         timer?.cancel()
         timer = nil
         if let indicator { NSStatusBar.system.removeStatusItem(indicator) }
