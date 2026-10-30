@@ -119,7 +119,7 @@ struct CaptureThumbnail: View {
                     .foregroundStyle(.secondary)
             }
         }
-        .clipShape(.rect(cornerRadius: 6))
+        .clipShape(.rect(cornerRadius: 8))
         .overlay(alignment: .bottomLeading) {
             if capture.kind == .recording {
                 Label(CaptureRulesText.duration(capture.duration), systemImage: "play.fill")
