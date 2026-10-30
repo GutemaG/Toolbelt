@@ -47,6 +47,8 @@ struct ToolbeltView: View {
                 InfoView(surface: surface, query: query)
             } else if tool == .camera {
                 CameraView(surface: surface, window: window)
+            } else if tool == .mixer {
+                VolumeMixerView(surface: surface, window: window, query: query)
             } else {
                 results
             }
@@ -149,6 +151,7 @@ struct ToolbeltView: View {
         case .screenshots: return "Search Screenshots"
         case .recording: return "Search Recordings"
         case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
+        case .mixer: return "Search Apps"
         default: return "Search \(tool.title)"
         }
     }

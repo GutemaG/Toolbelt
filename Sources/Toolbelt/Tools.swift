@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, toggles, system, info, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -20,6 +20,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .windows: "Windows"
         case .timer: "Timer"
         case .sound: "Sound"
+        case .mixer: "Volume Mixer"
         case .toggles: "Toggles"
         case .system: "System"
         case .info: "Info"
@@ -39,6 +40,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .windows: "rectangle.split.2x1"
         case .timer: "timer"
         case .sound: "speaker.wave.2"
+        case .mixer: "slider.horizontal.3"
         case .toggles: "switch.2"
         case .system: "gauge.with.dots.needle.50percent"
         case .info: "info.circle"
@@ -59,6 +61,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .windows: "Snap the front window to halves, thirds or full size."
         case .timer: "Count down, with the time left in the menu bar."
         case .sound: "Switch between speakers, headphones and AirPods."
+        case .mixer: "Turn each app up, down or off on its own."
         case .toggles: "Dark Mode, desktop icons, hidden files, lock and more."
         case .system: "CPU, memory, temperature, fans, and the apps using the most energy."
         case .info: "Battery health, storage, hardware, network, and your developer tools."
@@ -79,6 +82,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .windows: .indigo
         case .timer: .green
         case .sound: .cyan
+        case .mixer: .orange
         case .toggles: .gray
         case .system: .pink
         case .info: .blue
@@ -98,6 +102,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .windows: "Snap windows"
         case .timer: "Start a timer"
         case .sound: "Choose the sound output"
+        case .mixer: "Set the volume of each app"
         case .toggles: "Flip a system switch"
         case .system: "See CPU and energy use"
         case .info: "See details about this Mac"

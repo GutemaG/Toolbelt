@@ -296,3 +296,14 @@ func toolVersions(_ output: String, marker: String?, expected: String) {
     #expect(CameraRules.pick(saved: nil, preferred: nil, available: cameras) == "built-in")
     #expect(CameraRules.pick(saved: "usb", preferred: nil, available: []) == nil)
 }
+
+@Test func mixerVolumes() {
+    #expect(MixerRules.gain(level: 1, muted: false) == 1)
+    #expect(MixerRules.gain(level: 0.5, muted: false) == 0.25)
+    #expect(MixerRules.gain(level: 0.8, muted: true) == 0)
+    #expect(MixerRules.gain(level: 1.4, muted: false) == 1)
+    #expect(!MixerRules.needsTap(level: 1, muted: false))
+    #expect(MixerRules.needsTap(level: 0.9, muted: false) && MixerRules.needsTap(level: 1, muted: true))
+    #expect(MixerRules.nudge(0.64, by: 0.1) == 0.7 && MixerRules.nudge(0.95, by: 0.1) == 1 && MixerRules.nudge(0.05, by: -0.1) == 0)
+    #expect(MixerRules.percent(0.644) == "64%" && MixerRules.percent(2) == "100%")
+}

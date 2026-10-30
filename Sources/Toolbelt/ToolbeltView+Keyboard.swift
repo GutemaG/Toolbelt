@@ -77,6 +77,11 @@ extension ToolbeltView {
         case (15, true) where tool == .info: MacInfo.shared.load(MacInfo.shared.tab, force: true) // Command-R
         case (36, _) where tool == .camera, (76, _) where tool == .camera: model.photoCount += 1 // Return takes a photo
         case (46, false) where tool == .camera: Camera.toggleMirror() // M
+        case (125, false) where tool == .mixer: VolumeMixer.shared.step(1, in: VolumeMixerView.shown(query))   // Down
+        case (126, false) where tool == .mixer: VolumeMixer.shared.step(-1, in: VolumeMixerView.shown(query))  // Up
+        case (123, false) where tool == .mixer && query.isEmpty: VolumeMixer.shared.nudge(-0.1, in: VolumeMixerView.shown(query)) // Left
+        case (124, false) where tool == .mixer && query.isEmpty: VolumeMixer.shared.nudge(0.1, in: VolumeMixerView.shown(query))  // Right
+        case (36, _) where tool == .mixer, (76, _) where tool == .mixer: VolumeMixer.shared.toggleSelected(in: VolumeMixerView.shown(query)) // Return mutes
         case (125, false): // Down: one row, or one grid row inside the pinned grid
             let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
             selected = min(selected + step, max(entries.count - 1, 0))

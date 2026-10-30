@@ -67,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if prefs.enabled.contains(.clipboard) { model.clipboard.start() } else { model.clipboard.stop() }
         if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn { KeepAwake.shared.stop() }
         if !prefs.enabled.contains(.recording), Recorder.shared.isRecording { Recorder.shared.stop() }
+        if prefs.enabled.contains(.mixer) { VolumeMixer.shared.resume() } else { VolumeMixer.shared.stopAll() }
         SystemMonitor.shared.menuBar = prefs.enabled.contains(.system) && prefs.ownIcon.contains(.system)
             && UserDefaults.standard.object(forKey: SystemMonitor.menuBarKey) as? Bool ?? true
         if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
@@ -93,6 +94,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     /// The self-test's result becomes the exit code, after a normal quit.
     func applicationWillTerminate(_ notification: Notification) {
         KeepAwake.shared?.stop()
+        VolumeMixer.shared.stopAll()
         if SelfTest.requested { exit(SelfTest.exitCode) }
     }
 }

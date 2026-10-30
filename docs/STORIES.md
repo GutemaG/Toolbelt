@@ -582,6 +582,20 @@ UX:
 - Privacy: the camera runs only while the window is on screen; asks for Camera on first open; snapshots and the self-test show a placeholder
 Status: done
 
+### S-080 Turn single apps up or down in Volume Mixer
+As the user, I open Volume Mixer and see the output volume and every app playing sound, each with its own slider and mute button, so I can turn music down during a call without touching the call.
+Acceptance:
+- [unit] The slider's level is squared into gain; full volume and not muted means the app is left alone; arrow steps stay on tenths.
+- [self] The output volume and the apps read; Toolbelt is not listed; test runs never reroute sound; Reset brings an app back to full.
+- [snap] panel-mixer shows the output row and sample apps (one turned down, one muted and not playing).
+- [manual] Turning Music to 20% is heard at once; quitting Toolbelt or turning Volume Mixer off brings it back to full; a saved volume applies when the app plays again with the window closed.
+UX:
+- Flow: tool picker -> Output row and Apps -> drag a slider or ←/→ on the chosen row, ↩ or the speaker to mute, right-click Reset to Full Volume
+- Surface: the shared panel and popover; the search field filters apps
+- States: "No Apps Playing Sound"; "Not playing" under an app that has a saved volume; "Set the volume on the device itself" for outputs without one; a note with Open Privacy Settings when System Audio Recording is off
+- Permission: System Audio Recording is asked the first time an app is turned down, not before; apps at full volume never need it
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.

@@ -61,6 +61,7 @@ struct SettingsView: View {
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
             case .sound: ToolSettings(tool: .sound)
+            case .mixer: ToolSettings(tool: .mixer)
             case .toggles: ToolSettings(tool: .toggles)
             case .system: ToolSettings(tool: .system)
             case .info: ToolSettings(tool: .info)
@@ -93,7 +94,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, toggles, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -105,7 +106,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
-        case .timer, .sound, .toggles, .system, .info, .keepAwake: .tools
+        case .timer, .sound, .mixer, .toggles, .system, .info, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -174,6 +175,7 @@ struct GeneralSettings: View {
     @State private var accessibility = AXIsProcessTrusted()
     @State private var screenRecording = CGPreflightScreenCaptureAccess()
     @State private var camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+    @State private var systemAudio = AudioCapture.status == .allowed
 
     var body: some View {
         Section {
@@ -198,6 +200,15 @@ struct GeneralSettings: View {
                     open("Privacy_Camera")
                 }
             }
+            PermissionRow(symbol: "slider.horizontal.3", title: "System Audio Recording",
+                          detail: "Turning single apps up or down in Volume Mixer.",
+                          isOn: systemAudio) {
+                if AudioCapture.status == .unknown {
+                    Task { systemAudio = await AudioCapture.request() == .allowed }
+                } else {
+                    AudioCapture.openSettings()
+                }
+            }
         } header: {
             // Follows the page header, which would otherwise make it render light; match the other headings.
             Text("Permissions").font(.headline).foregroundStyle(.primary)
@@ -212,6 +223,7 @@ struct GeneralSettings: View {
                 accessibility = AXIsProcessTrusted()
                 screenRecording = CGPreflightScreenCaptureAccess()
                 camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
+                systemAudio = AudioCapture.status == .allowed
                 try? await Task.sleep(for: .seconds(1.5))
             }
         }
@@ -413,6 +425,13 @@ struct ToolSettings: View {
             ColorOptions()
         case .camera:
             CameraOptions()
+        case .mixer:
+            Section {
+            } footer: {
+                Text("macOS has no volume per app, so Toolbelt plays a turned-down app through itself, using System Audio Recording. Apps at full volume are never touched, and every app plays as before when Toolbelt quits or Volume Mixer is off. Volumes are remembered for each app.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .windows:
             WindowOptions()
         case .keepAwake:

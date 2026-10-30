@@ -231,6 +231,20 @@ enum SelfTest {
             let flipped = wide.makeImage().flatMap(Camera.flipped)
             check("a mirrored photo is flipped left to right", flipped.map { Self.isRed($0, x: 3) && !Self.isRed($0, x: 0) } ?? false)
 
+            // S-080 volume mixer: reads apps and the output; test runs never change any sound
+            let mixer = VolumeMixer.shared
+            mixer.refresh()
+            check("the output volume reads between 0 and 1", mixer.outputVolume.map { (0...1).contains($0) } ?? true,
+                  "\(mixer.outputName) \(mixer.outputVolume.map(MixerRules.percent) ?? "no volume")")
+            check("apps playing sound are real apps, Toolbelt left out", mixer.apps.allSatisfy { $0.path?.hasSuffix(".app") == true && $0.id != Bundle.main.bundleIdentifier },
+                  mixer.apps.map { "\($0.name)\($0.isPlaying ? " playing" : "")" }.joined(separator: ", "))
+            let fake = VolumeMixer.App(id: "com.example.loud", name: "Loud", path: nil, processes: [], isPlaying: true)
+            mixer.setLevel(0.3, for: fake)
+            mixer.toggleMute(fake)
+            check("test runs never reroute an app's sound", mixer.isSimulated && mixer.tapCount == 0 && mixer.isMuted(fake))
+            mixer.reset(fake)
+            check("Reset brings an app back to full volume", mixer.level(fake) == 1 && !mixer.isMuted(fake))
+
             // S-078 Info: every tab reads, offline (no public IP lookup)
             let offline = InfoReader.Options(locationAllowed: false, lookUpPublicIP: false)
             func rows(_ tab: InfoTab) async -> [InfoRow] { await InfoReader.read(tab, options: offline).flatMap(\.rows) }

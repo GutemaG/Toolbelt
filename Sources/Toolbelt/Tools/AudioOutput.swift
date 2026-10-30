@@ -1,3 +1,4 @@
+import AudioToolbox
 import CoreAudio
 import Foundation
 
@@ -80,6 +81,38 @@ enum AudioOutput {
         var address = AudioObjectPropertyAddress(mSelector: kAudioDevicePropertyMute, mScope: kAudioDevicePropertyScopeOutput,
                                                  mElement: kAudioObjectPropertyElementMain)
         AudioObjectSetPropertyData(id, &address, 0, nil, UInt32(MemoryLayout<UInt32>.size), &value)
+    }
+
+    /// The device's unique id, which aggregate devices name their parts by.
+    static func uid(_ id: AudioDeviceID) -> String? {
+        string(id, kAudioDevicePropertyDeviceUID)
+    }
+
+    static func name(_ id: AudioDeviceID) -> String? {
+        string(id, kAudioObjectPropertyName)
+    }
+
+    private static var volumeAddress: AudioObjectPropertyAddress {
+        AudioObjectPropertyAddress(mSelector: kAudioHardwareServiceDeviceProperty_VirtualMainVolume,
+                                   mScope: kAudioDevicePropertyScopeOutput, mElement: kAudioObjectPropertyElementMain)
+    }
+
+    /// The current output's volume, 0 to 1, or nil when the device has none (HDMI, some USB).
+    static var volume: Double? {
+        guard let id = current else { return nil }
+        var address = volumeAddress
+        var value: Float32 = 0
+        var size = UInt32(MemoryLayout<Float32>.size)
+        guard AudioObjectHasProperty(id, &address),
+              AudioObjectGetPropertyData(id, &address, 0, nil, &size, &value) == noErr else { return nil }
+        return Double(value)
+    }
+
+    static func setVolume(_ level: Double) {
+        guard let id = current else { return }
+        var address = volumeAddress
+        var value = Float32(min(max(level, 0), 1))
+        AudioObjectSetPropertyData(id, &address, 0, nil, UInt32(MemoryLayout<Float32>.size), &value)
     }
 
     private static func hasOutput(_ id: AudioDeviceID) -> Bool {

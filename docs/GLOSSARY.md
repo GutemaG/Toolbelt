@@ -35,4 +35,6 @@ Every word on screen comes from this table. Code names may differ
 | Camera | The tool with a live preview of a camera, to check how you look | Mirror app, webcam, Photo Booth |
 | Mirror | Flip the camera preview left to right, as a mirror shows you | flip, reverse |
 | Take Photo | Save the camera preview as an image in the screenshot folder | snap, capture, shoot |
+| Volume Mixer | The tool with the output volume and a volume for each app playing sound | mixer, app volume, per-app volume |
+| Reset to Full Volume | Put an app back at 100% and stop playing it through Toolbelt | restore, default |
 | Copy All | Copy everything on the open Info tab as plain text | export, report |
