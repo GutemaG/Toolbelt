@@ -195,6 +195,25 @@ enum SelfTest {
             check("sound output devices are listed", !outputs.isEmpty, "\(outputs.map(\.name))")
             check("the current output is one of them", outputs.contains { $0.id == AudioOutput.current })
 
+            // S-077 scrolling capture: frames of a drawn page join back into the page
+            let page = Self.noisePage(width: 300, height: 1200)
+            let frameHeight = 500
+            let scroll = ScrollSession(frameHeight: frameHeight)
+            var steps: [ScrollStitcher.Step] = []
+            for y in [0, 0, 180, 400, 400, 700] {
+                if let frame = page.cropping(to: CGRect(x: 0, y: y, width: 300, height: frameHeight)) { steps.append(await scroll.add(frame).step) }
+            }
+            check("scrolling frames are matched by how far they moved",
+                  steps == [.first, .same, .moved(by: 180, keep: 320..<500), .moved(by: 220, keep: 280..<500), .same, .moved(by: 300, keep: 200..<500)],
+                  "\(steps)")
+            let joined = await scroll.compose()
+            let expected = page.cropping(to: CGRect(x: 0, y: 0, width: 300, height: 1200))!
+            let difference = joined.map { image in
+                zip(ScrollSession.signature(image), ScrollSession.signature(expected)).map { ScrollStitcher.difference($0, $1) }.max() ?? 999
+            } ?? 999
+            check("the joined image is the whole page, top first", joined?.height == 1200 && difference < 300,
+                  "\(joined?.width ?? 0)×\(joined?.height ?? 0), worst row \(difference)")
+
             // S-076 System: read only, nothing is quit
             let sensors = SystemSensors()
             _ = await sensors.read(processes: true)
@@ -238,6 +257,28 @@ enum SelfTest {
     }
 
     /// Black text on white, at Retina size.
+    /// A page of random colored blocks, different on every row band, for the scrolling capture check.
+    private static func noisePage(width: Int, height: Int) -> CGImage {
+        var seed: UInt64 = 7
+        var pixels = [UInt8](repeating: 255, count: width * height * 4)
+        for y in stride(from: 0, to: height, by: 2) {
+            for x in stride(from: 0, to: width, by: 8) {
+                seed = seed &* 6364136223846793005 &+ 1442695040888963407
+                let (r, g, b) = (UInt8(truncatingIfNeeded: seed >> 24), UInt8(truncatingIfNeeded: seed >> 32), UInt8(truncatingIfNeeded: seed >> 40))
+                for row in y..<min(y + 2, height) {
+                    for column in x..<min(x + 8, width) {
+                        let index = (row * width + column) * 4
+                        pixels[index] = r; pixels[index + 1] = g; pixels[index + 2] = b
+                    }
+                }
+            }
+        }
+        let provider = CGDataProvider(data: Data(pixels) as CFData)!
+        return CGImage(width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32, bytesPerRow: width * 4,
+                       space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.noneSkipLast.rawValue),
+                       provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent)!
+    }
+
     private static func render(text: String) -> CGImage {
         let image = NSImage(size: NSSize(width: 600, height: 120), flipped: false) { rect in
             NSColor.white.setFill()

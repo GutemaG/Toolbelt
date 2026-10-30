@@ -56,6 +56,21 @@ enum Snapshot {
                 model.pickingApps = false
             }
             PanelController.shared.hide()
+            // The scrolling capture bar, as it first shows.
+            if only == nil || only?.contains("scrollbar") == true {
+                let host = NSHostingView(rootView: ScrollCaptureBar(capture: .shared).themed())
+                let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: 200, y: 400), size: host.fittingSize), styleMask: .borderless, backing: .buffered, defer: false)
+                window.isOpaque = false
+                window.backgroundColor = .clear
+                window.contentView = host
+                window.orderFrontRegardless()
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.6))
+                    capture(to: "\(dir)/scrollbar-\(mode).png", window: window)
+                }
+                window.orderOut(nil)
+            }
             // The Markup window, on a drawn sample image that is deleted afterwards.
             if only == nil || only?.contains("markup") == true {
                 let url = CapturePrefs.folder.appendingPathComponent("markup-sample.png")

@@ -541,10 +541,23 @@ UX:
 - Words: "System", "Using the Most Energy", "Bring to Front", "Force Quit…", "Show CPU use next to the menu bar icon"
 Status: done
 
+### S-077 Capture a scrolling area
+As the user, I press ⌃⇧6 (or Scrolling in Screenshots), drag over the part that scrolls, scroll down by hand, and press Return to get one tall screenshot.
+Acceptance:
+- [unit] Frames join by how far the content moved; fixed headers and footers appear once; a blinking cursor is "nothing moved".
+- [self] Frames cut from a drawn page join back into the same page, top first.
+- [snap] scrollbar shows "Scroll down slowly" with Cancel and Done; Screenshots shows a Scrolling tile.
+- [manual] Scrolling a long page in Safari, a chat app and a code editor gives one clean image.
+UX:
+- Flow: ⌃⇧6 or Scrolling tile -> drag an area (Space: window, Return: screen) -> scroll down slowly -> Return or Done saves like any screenshot; Esc or Cancel stops without saving; ⌃⇧6 again also saves
+- Surface: a bar under the area (a tool kept open beside the work), with a frame around the area
+- States: "Scroll down slowly"; "2,480 px captured"; "Scroll back up a little" when a jump is too big to join; "Reached 30,000 px"
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
-- Markup editor, scrolling capture, OCR, GIF export (V2 research).
+- GIF export (V2 research). Scrolling capture that scrolls for you (needs Accessibility).
 - Window switcher, command palette. Fan control (needs a root helper).
 - Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.

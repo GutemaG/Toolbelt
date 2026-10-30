@@ -5,11 +5,11 @@ import ToolbeltKit
 /// Every global shortcut Toolbelt registers. Each belongs to a tool, has a
 /// default, and can be changed or cleared in that tool's Settings page.
 enum ShortcutID: Hashable, Identifiable {
-    case launcher, clipboard, snippets, shotArea, shotScreen, shotText, record, color
+    case launcher, clipboard, snippets, shotArea, shotScreen, shotText, shotScroll, record, color
     case window(WindowPosition)
 
     static var all: [ShortcutID] {
-        [.launcher, .clipboard, .snippets, .shotArea, .shotScreen, .shotText, .record, .color]
+        [.launcher, .clipboard, .snippets, .shotArea, .shotScreen, .shotText, .shotScroll, .record, .color]
             + WindowPosition.allCases.map(ShortcutID.window)
     }
 
@@ -24,6 +24,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .shotArea: "shot.area"
         case .shotScreen: "shot.screen"
         case .shotText: "shot.text"
+        case .shotScroll: "shot.scroll"
         case .record: "record"
         case .color: "color"
         case .window(let position): "window." + position.rawValue
@@ -38,6 +39,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .shotArea: "Capture an area or window"
         case .shotScreen: "Capture the whole screen"
         case .shotText: "Copy text from the screen"
+        case .shotScroll: "Capture a scrolling area"
         case .record: "Start or stop recording"
         case .color: "Pick a color"
         case .window(let position): position.title
@@ -49,7 +51,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: .launcher
         case .clipboard: .clipboard
         case .snippets: .snippets
-        case .shotArea, .shotScreen, .shotText: .screenshots
+        case .shotArea, .shotScreen, .shotText, .shotScroll: .screenshots
         case .record: .recording
         case .color: .colors
         case .window: .windows
@@ -65,6 +67,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .shotArea: return KeyCombo(keyCode: 21, modifiers: ctrlShift)
         case .shotScreen: return KeyCombo(keyCode: 20, modifiers: ctrlShift)
         case .shotText: return KeyCombo(keyCode: 19, modifiers: ctrlShift)
+        case .shotScroll: return KeyCombo(keyCode: 22, modifiers: ctrlShift)
         case .record: return KeyCombo(keyCode: 23, modifiers: ctrlShift)
         case .color: return KeyCombo(keyCode: 8, modifiers: ctrlShift)
         case .window(let position): return KeyCombo(keyCode: position.shortcut.keyCode, modifiers: KeyCombo.control | KeyCombo.option)
@@ -80,6 +83,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .shotArea: CaptureController.shared.screenshot(.area)
         case .shotScreen: CaptureController.shared.screenshot(.screen)
         case .shotText: TextGrabber.shared.grab()
+        case .shotScroll: ScrollCapture.shared.toggle()
         case .record: Recorder.shared.toggle()
         case .color: ColorPicker.shared.pick()
         case .window(let position): WindowSnapper.shared.snap(position)

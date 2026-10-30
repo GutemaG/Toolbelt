@@ -30,3 +30,4 @@ Every word on screen comes from this table. Code names may differ
 | System | The tool that shows CPU, memory, temperature, fans, battery and the apps using the most energy | Stats, Activity, Monitor |
 | Energy | What an app and its helpers drew over the last few seconds, in mW or W | power, impact |
 | Bring to Front | Switch to a running app from System's list | open, focus, activate |
+| Scrolling capture | A screenshot taller than the screen, joined from an area as it is scrolled by hand | long screenshot, stitch, panorama |

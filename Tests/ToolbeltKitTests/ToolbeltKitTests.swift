@@ -200,3 +200,59 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(SystemRules.percentText(0.094) == "9%")
     #expect(SystemRules.memoryText(used: 13_207_024_435, total: 25_769_803_776) == "12.3 of 24 GB")
 }
+
+/// A page of random rows, seen through a 100-row window with a fixed header and footer.
+private struct ScrollPage {
+    var page: [[UInt8]] = []
+    let header: [[UInt8]]
+    let footer: [[UInt8]]
+
+    init() {
+        var seed: UInt64 = 42
+        func next() -> UInt8 {
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            return UInt8(truncatingIfNeeded: seed >> 33)
+        }
+        page = (0..<600).map { _ in (0..<16).map { _ in next() } }
+        header = (0..<10).map { _ in [UInt8](repeating: 200, count: 16) }
+        footer = (0..<6).map { _ in [UInt8](repeating: 30, count: 16) }
+    }
+
+    func frame(at y: Int) -> [[UInt8]] { header + Array(page[y..<(y + 84)]) + footer }
+}
+
+@Test func scrollStitchJoinsFramesWithFixedBands() {
+    let source = ScrollPage()
+    var stitcher = ScrollStitcher(frameHeight: 100)
+    var frames: [[[UInt8]]] = []
+    for y in [0, 0, 20, 45, 45, 90, 140] {
+        let frame = source.frame(at: y)
+        switch stitcher.add(frame) {
+        case .first, .moved: frames.append(frame)
+        case .same, .lost: break
+        }
+    }
+    #expect(frames.count == 5)
+    let joined = stitcher.pieces.flatMap { piece in Array(frames[piece.frame][piece.rows]) }
+    #expect(joined == source.header + Array(source.page[0..<(140 + 84)]) + source.footer)
+    #expect(stitcher.height == joined.count)
+}
+
+@Test func scrollStitchReportsSameAndLost() {
+    let source = ScrollPage()
+    var stitcher = ScrollStitcher(frameHeight: 100)
+    #expect(stitcher.add(source.frame(at: 100)) == .first)
+    #expect(stitcher.add(source.frame(at: 100)) == .same)
+    #expect(stitcher.add(source.frame(at: 300)) == .lost)   // too far: nothing overlaps
+    #expect(stitcher.add(source.frame(at: 60)) == .lost)    // scrolled up
+    if case .moved(let by, _) = stitcher.add(source.frame(at: 130)) { #expect(by == 30) } else { Issue.record("expected a move") }
+}
+
+@Test func scrollStitchIgnoresASmallChangeInPlace() {
+    let source = ScrollPage()
+    var stitcher = ScrollStitcher(frameHeight: 100)
+    _ = stitcher.add(source.frame(at: 50))
+    var blink = source.frame(at: 50)
+    blink[40] = [UInt8](repeating: 0, count: 16) // a text cursor appears
+    #expect(stitcher.add(blink) == .same)
+}

@@ -39,7 +39,9 @@ enum ToolActions {
             }
             let text = ToolAction(id: "shot.text", title: "Text", symbol: "text.viewfinder",
                                   help: "Copy the text or QR code in an area (\(ShortcutID.shotText.label))") { TextGrabber.shared.grab() }
-            return ("Capture", modes + [text])
+            let scroll = ToolAction(id: "shot.scroll", title: "Scrolling", symbol: "scroll",
+                                    help: "Capture an area as you scroll it (\(ShortcutID.shotScroll.label))") { ScrollCapture.shared.start() }
+            return ("Capture", modes + [scroll, text])
         case .recording:
             if model.isRecording {
                 return ("Recording", [ToolAction(id: "rec.stop", title: "Stop", symbol: "stop.circle.fill",
@@ -158,7 +160,7 @@ enum ToolActions {
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
         case .snippets: return (surface == .panel ? "↩ Paste" : "↩ Copy") + "   Type a keyword like ;addr   Right-click to edit"
-        case .screenshots: return "\(ShortcutID.shotArea.label) Area or Window   \(ShortcutID.shotScreen.label) Screen   \(ShortcutID.shotText.label) Text"
+        case .screenshots: return "\(ShortcutID.shotArea.label) Area or Window   \(ShortcutID.shotScreen.label) Screen   \(ShortcutID.shotScroll.label) Scrolling   \(ShortcutID.shotText.label) Text"
         case .recording: return model.isRecording ? "\(ShortcutID.record.label) Stop" : "\(ShortcutID.record.label) Start or Stop   ↩ Open"
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
