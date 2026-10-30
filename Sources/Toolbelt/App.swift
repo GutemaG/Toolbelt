@@ -2,6 +2,7 @@ import AppKit
 import Carbon.HIToolbox
 import SwiftData
 import SwiftUI
+import ToolbeltKit
 
 // Toolbelt
 //   Toolbelt                      the app
@@ -33,6 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Services first: the panel and popovers draw the last used tool at once, and the capture tools read these.
         CaptureController.shared = CaptureController(model: model)
         Recorder.shared = Recorder(model: model)
+        KeepAwake.shared = KeepAwake(model: model)
+        ColorPicker.shared = ColorPicker(model: model)
         PanelController.shared = PanelController(model: model)
         statusItems = StatusItems(model: model)
         StatusItems.shared = statusItems
@@ -76,6 +79,26 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 CaptureController.shared.screenshot(.screen)
             }
         }
+        if prefs.enabled.contains(.screenshots) {
+            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_2, modifiers: controlKey | shiftKey) {
+                TextGrabber.shared.grab()
+            }
+        }
+        if prefs.enabled.contains(.colors) {
+            Hotkeys.shared.register(Tool.colors.title, keyCode: kVK_ANSI_C, modifiers: controlKey | shiftKey) {
+                ColorPicker.shared.pick()
+            }
+        }
+        if prefs.enabled.contains(.windows) {
+            for position in WindowPosition.allCases {
+                Hotkeys.shared.register(Tool.windows.title, keyCode: position.shortcut.keyCode, modifiers: controlKey | optionKey) {
+                    WindowSnapper.shared.snap(position)
+                }
+            }
+        }
+        if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn {
+            KeepAwake.shared.stop()
+        }
         if prefs.enabled.contains(.recording) {
             Hotkeys.shared.register(Tool.recording.title, keyCode: kVK_ANSI_5, modifiers: controlKey | shiftKey) {
                 Recorder.shared.toggle()
@@ -106,6 +129,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// The self-test's result becomes the exit code, after a normal quit.
     func applicationWillTerminate(_ notification: Notification) {
+        KeepAwake.shared?.stop()
         if SelfTest.requested { exit(SelfTest.exitCode) }
     }
 }
@@ -137,11 +161,17 @@ final class StatusItems {
         for tool in Tool.allCases where wanted.contains(tool) && tools[tool] == nil {
             tools[tool] = StatusItemController(model: model, tool: tool)
         }
+        refreshIcons()
     }
 
     func closePopovers() {
         main?.closePopover()
         tools.values.forEach { $0.closePopover() }
+    }
+
+    /// Keep Awake's own icon fills while it is on.
+    func refreshIcons() {
+        tools[.keepAwake]?.setSymbol(KeepAwake.shared.isOn ? "cup.and.saucer.fill" : Tool.keepAwake.symbol)
     }
 
     /// Shows the Toolbelt popover, or the first tool icon when it is hidden.
@@ -184,6 +214,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         )
     }
 
+    func setSymbol(_ symbol: String) {
+        item.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tool?.title ?? "Toolbelt")
+    }
+
     func remove() {
         closePopover()
         NSStatusBar.system.removeStatusItem(item)
@@ -205,6 +239,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         StatusItems.shared?.closePopovers()
         if let tool { model.tool = tool }
         model.openCount += 1
+        // Window snapping acts on the app that was in front before the popover.
+        if let front = NSWorkspace.shared.frontmostApplication, front != .current { WindowSnapper.shared.previousApp = front }
         NSApp.activate()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         popover.contentViewController?.view.window?.makeKey()

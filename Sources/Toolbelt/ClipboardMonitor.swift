@@ -16,6 +16,10 @@ final class ClipboardMonitor {
         lastChange = NSPasteboard.general.changeCount
     }
 
+    static let cleanLinksKey = "clipboard.cleanLinks"
+    /// On by default; Settings > Clipboard turns it off.
+    static var cleansLinks: Bool { UserDefaults.standard.object(forKey: cleanLinksKey) as? Bool ?? true }
+
     func start() {
         guard task == nil else { return }
         lastChange = pasteboard.changeCount
@@ -43,8 +47,15 @@ final class ClipboardMonitor {
         // Copied Finder files are not in version one.
         if pasteboard.types?.contains(.fileURL) == true { return }
 
-        if let text = pasteboard.string(forType: .string),
+        if var text = pasteboard.string(forType: .string),
            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // Clean links: put the link back without its tracking parameters.
+            if Self.cleansLinks, let clean = LinkCleaner.clean(text) {
+                text = clean
+                pasteboard.clearContents()
+                pasteboard.setString(clean, forType: .string)
+                lastChange = pasteboard.changeCount
+            }
             let kind: ClipKind = ClipRules.isLink(text) ? .link : .text
             model.record(kind: kind, text: text, fingerprint: "t:" + text, source: source)
         } else if let data = pngData(), data.count <= ClipRules.maxImageBytes {

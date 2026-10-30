@@ -65,6 +65,12 @@ final class AppModel {
     var pickingApps = false
     /// Set by Recorder, so every view's Record/Stop button follows it.
     var isRecording = false
+    /// Keep Awake: when it ends (.distantFuture until turned off), nil when off.
+    var awakeUntil: Date?
+    /// The length last started, so its tile shows as on.
+    var awakeLength: TimeInterval?
+    /// Colors picked, newest first, as "#RRGGBB".
+    var recentColors: [String] = []
 
     init(container: ModelContainer) {
         self.container = container

@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, screenshots, recording
+    case launcher, clipboard, screenshots, recording, colors, windows, keepAwake
 
     var id: String { rawValue }
 
@@ -14,6 +14,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: "Clipboard"
         case .screenshots: "Screenshots"
         case .recording: "Recording"
+        case .colors: "Colors"
+        case .windows: "Windows"
+        case .keepAwake: "Keep Awake"
         }
     }
 
@@ -23,6 +26,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: "doc.on.clipboard"
         case .screenshots: "camera.viewfinder"
         case .recording: "record.circle"
+        case .colors: "eyedropper"
+        case .windows: "rectangle.split.2x1"
+        case .keepAwake: "cup.and.saucer"
         }
     }
 
@@ -33,6 +39,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: "Search everything you copied and paste it again."
         case .screenshots: "Capture an area, a window or the whole screen."
         case .recording: "Record an area, a window or the screen to a movie."
+        case .colors: "Pick any color on the screen and copy it."
+        case .windows: "Snap the front window to halves, thirds or full size."
+        case .keepAwake: "Stop the Mac from sleeping for a while."
         }
     }
 
@@ -43,6 +52,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: .orange
         case .screenshots: .purple
         case .recording: .red
+        case .colors: .teal
+        case .windows: .indigo
+        case .keepAwake: .brown
         }
     }
 
@@ -52,6 +64,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: "Search clipboard history"
         case .screenshots: "Take a screenshot"
         case .recording: "Record the screen"
+        case .colors: "Pick a color"
+        case .windows: "Snap windows"
+        case .keepAwake: "Keep the Mac awake"
         }
     }
 
@@ -62,6 +77,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .clipboard: "⇧⌘V"
         case .screenshots: "⌃⇧4 area or window, ⌃⇧3 screen"
         case .recording: "⌃⇧5 start or stop"
+        case .colors: "⌃⇧C"
+        case .windows: "⌃⌥ + arrows and letters"
+        case .keepAwake: "None, use the panel or its icon"
         }
     }
 }

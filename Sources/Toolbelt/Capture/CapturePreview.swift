@@ -78,6 +78,13 @@ private struct CapturePreviewView: View {
                     onClose()
                 }
                 .help("Copy to the clipboard")
+                if capture.kind == .screenshot {
+                    Button("Pin to Screen", systemImage: "pin") {
+                        PinnedImage.pin(capture.url)
+                        onClose()
+                    }
+                    .help("Keep it floating above other windows")
+                }
                 Button("Show in Finder", systemImage: "folder") {
                     NSWorkspace.shared.activateFileViewerSelecting([capture.url])
                     onClose()

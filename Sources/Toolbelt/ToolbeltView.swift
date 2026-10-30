@@ -146,15 +146,7 @@ struct ToolbeltView: View {
         case .screenshots: return "Search Screenshots"
         case .recording: return "Search Recordings"
         case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
-        }
-    }
-
-    private var searchNoun: String {
-        switch tool {
-        case .launcher: "apps"
-        case .clipboard: "clips"
-        case .screenshots: "screenshots"
-        case .recording: "recordings"
+        default: return "Search \(tool.title)"
         }
     }
 
@@ -257,6 +249,17 @@ struct ToolbeltView: View {
                     .font(.caption)
                     .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
                     .fixedSize()
+            case .color(let hex):
+                let rgb = RGB(hex: hex) ?? RGB(r: 0, g: 0, b: 0)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Color(red: Double(rgb.r) / 255, green: Double(rgb.g) / 255, blue: Double(rgb.b) / 255))
+                    .stroke(.separator)
+                    .frame(width: 32, height: 32)
+                Text(hex).monospaced()
+                Spacer(minLength: Space.sm)
+                Text(rgb.rgb + "   " + rgb.hsl)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
             case .add, .action:
                 EmptyView()
             }
@@ -288,12 +291,13 @@ struct ToolbeltView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .help(app.name)
-            case .action(let mode):
-                Image(systemName: isRecording && tool == .recording ? "stop.circle.fill" : mode.symbol)
+            case .action(let action):
+                Image(systemName: action.symbol)
                     .font(.system(size: 28, weight: .light))
                     .frame(width: 48, height: 48)
-                Text(isRecording && tool == .recording ? "Stop" : mode.title)
+                Text(action.title)
                     .font(.caption)
+                    .lineLimit(1)
             default:
                 Image(systemName: "plus")
                     .font(.title2)
@@ -310,6 +314,8 @@ struct ToolbeltView: View {
         .background {
             if selected {
                 RoundedRectangle(cornerRadius: 12).fill(Palette.accent)
+            } else if case .action(let action) = entry, action.isOn {
+                RoundedRectangle(cornerRadius: 12).fill(.tint.opacity(0.25))
             } else if case .add = entry {
                 RoundedRectangle(cornerRadius: 12).fill(.quaternary)
             }
@@ -322,9 +328,7 @@ struct ToolbeltView: View {
     private func tileHelp(_ entry: Entry) -> String {
         switch entry {
         case .add: return "Pin apps to the top of the Launcher"
-        case .action(let mode):
-            if tool == .recording { return isRecording ? "Stop recording (⌃⇧5)" : "Record \(mode.title.lowercased())" }
-            return mode == .screen ? "Capture the whole screen (⌃⇧3)" : "Capture \(mode == .area ? "an area" : "a window") (⌃⇧4)"
+        case .action(let action): return action.help
         default: return ""
         }
     }
@@ -356,9 +360,19 @@ struct ToolbeltView: View {
             Button("Add…") { activate(entry, plainText: false) }
         case .action:
             EmptyView()
+        case .color(let hex):
+            let rgb = RGB(hex: hex) ?? RGB(r: 0, g: 0, b: 0)
+            ForEach(ColorTextFormat.allCases, id: \.self) { format in
+                Button("Copy \(rgb.text(format))") { ColorPicker.shared.copy(rgb, as: format) }
+            }
+            Divider()
+            Button("Remove", role: .destructive) { ColorPicker.shared.forget(hex) }
         case .capture(let capture):
             Button("Open") { activate(entry, plainText: false) }
             Button("Copy") { CaptureController.shared.copy(capture) }
+            if capture.kind == .screenshot {
+                Button("Pin to Screen") { PinnedImage.pin(capture.url) }
+            }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([capture.url]) }
             Divider()
             Button("Move to Trash", role: .destructive) { CaptureController.shared.delete(capture) }
@@ -369,7 +383,7 @@ struct ToolbeltView: View {
     private var emptyState: some View {
         if !query.isEmpty {
             ContentUnavailableView("No Results", systemImage: "magnifyingglass",
-                                   description: Text("No \(searchNoun) match “\(query)”."))
+                                   description: Text("Nothing matches “\(query)”."))
         } else if tool == .clipboard {
             ContentUnavailableView("No Clips Yet", systemImage: "doc.on.clipboard",
                                    description: Text("Copy something and it shows up here."))
@@ -404,16 +418,7 @@ struct ToolbeltView: View {
         .padding(.vertical, Space.sm)
     }
 
-    private var hint: String {
-        switch tool {
-        case .launcher: return model.pickingApps ? "↩ Pin or Unpin   esc Done" : "↩ Open   ⌘P Pin"
-        case .screenshots: return "⌃⇧4 Area or Window   ⌃⇧3 Screen   ↩ Open"
-        case .recording: return isRecording ? "⌃⇧5 Stop" : "⌃⇧5 Start or Stop   ↩ Open"
-        case .clipboard:
-            let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
-            return main + "   ⌘P Pin   ⌘⌫ Delete"
-        }
-    }
+    private var hint: String { ToolActions.hint(for: tool, model: model, surface: surface) }
 
     // MARK: Data
 
@@ -422,16 +427,19 @@ struct ToolbeltView: View {
         case clip(ClipItem)
         /// The Add… tile at the end of the pinned apps.
         case add
-        /// Area, Window or Screen in the capture tools.
-        case action(CaptureMode)
+        /// A tile from ToolActions: capture modes, window positions, Keep Awake lengths.
+        case action(ToolAction)
         case capture(Capture)
+        /// A recently picked color, "#RRGGBB".
+        case color(String)
 
         var id: String {
             switch self {
             case .app(let app): "a:" + app.path
             case .clip(let clip): "c:" + clip.uuid.uuidString
             case .add: "add"
-            case .action(let mode): "m:" + mode.rawValue
+            case .action(let action): "m:" + action.id
+            case .color(let hex): "k:" + hex
             case .capture(let capture): "f:" + capture.uuid.uuidString
             }
         }
@@ -486,14 +494,6 @@ struct ToolbeltView: View {
                     frequent.isEmpty ? nil : Section(title: "Frequent", entries: frequent.map(Entry.app)),
                     Section(title: "Applications", entries: rest.map(Entry.app))]
                 .compactMap { $0 }
-        case .screenshots, .recording:
-            let kind: CaptureKind = tool == .screenshots ? .screenshot : .recording
-            let recent = captures.filter { $0.kind == kind && $0.exists && (query.isEmpty || ClipRules.matches(query, text: $0.name)) }
-            let modes: [CaptureMode] = tool == .recording && isRecording ? [.area] : CaptureMode.allCases
-            var result: [Section] = []
-            if query.isEmpty { result.append(Section(title: tool == .screenshots ? "Capture" : "Record", entries: modes.map(Entry.action), grid: true)) }
-            if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.capture))) }
-            return result
         case .clipboard:
             let matching = clips.filter { $0.kind == .image ? query.isEmpty : ClipRules.matches(query, text: $0.text) }
             let pinned = matching.filter(\.isPinned).map(Entry.clip)
@@ -501,6 +501,24 @@ struct ToolbeltView: View {
             return [pinned.isEmpty ? nil : Section(title: "Pinned", entries: pinned),
                     recent.isEmpty ? nil : Section(title: pinned.isEmpty ? nil : "Recent", entries: recent)]
                 .compactMap { $0 }
+        default:
+            var result: [Section] = []
+            if let grid = ToolActions.grid(for: tool, model: model) {
+                let actions = grid.actions.filter { query.isEmpty || ClipRules.matches(query, text: $0.title) }
+                if !actions.isEmpty { result.append(Section(title: grid.title, entries: actions.map(Entry.action), grid: true)) }
+            }
+            switch tool {
+            case .screenshots, .recording:
+                let kind: CaptureKind = tool == .screenshots ? .screenshot : .recording
+                let recent = captures.filter { $0.kind == kind && $0.exists && (query.isEmpty || ClipRules.matches(query, text: $0.name)) }
+                if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.capture))) }
+            case .colors:
+                let recent = model.recentColors.filter { query.isEmpty || ClipRules.matches(query, text: $0) }
+                if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.color))) }
+            default:
+                break
+            }
+            return result
         }
     }
 
@@ -532,13 +550,12 @@ struct ToolbeltView: View {
                 model.copy(clip, plainText: plainText)
                 close()
             }
-        case .action(let mode):
+        case .action(let action):
+            if action.closes { close() }
+            action.run()
+        case .color(let hex):
+            if let rgb = RGB(hex: hex) { ColorPicker.shared.copy(rgb, as: ColorPicker.format) }
             close()
-            if tool == .recording {
-                isRecording ? Recorder.shared?.stop() : Recorder.shared?.start(mode)
-            } else {
-                CaptureController.shared.screenshot(mode)
-            }
         case .capture(let capture):
             close()
             NSWorkspace.shared.open(capture.url)
@@ -655,130 +672,3 @@ struct ToolbeltView: View {
     }
 }
 
-/// One clip: source app icon, a one-line preview or thumbnail, and its age.
-private struct ClipRow: View {
-    let clip: ClipItem
-    let icon: NSImage?
-    let selected: Bool
-
-    var body: some View {
-        Group {
-            if let icon {
-                Image(nsImage: icon).resizable().frame(width: 20, height: 20)
-            } else {
-                Image(systemName: "doc.on.clipboard").frame(width: 20, height: 20)
-            }
-            switch clip.kind {
-            case .image:
-                if let thumb = Thumbnails.shared.image(for: clip) {
-                    Image(nsImage: thumb)
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxHeight: 48)
-                        .clipShape(.rect(cornerRadius: 4))
-                }
-                Text("Image")
-                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
-            case .link:
-                Image(systemName: "link").font(.caption)
-                Text(ClipRules.preview(clip.text))
-                    .lineLimit(1)
-                    .help(String(clip.text.prefix(500)))
-            case .text:
-                Text(ClipRules.preview(clip.text))
-                    .lineLimit(1)
-                    .help(String(clip.text.prefix(500)))
-            }
-            Spacer(minLength: Space.sm)
-            if clip.isPinned {
-                Image(systemName: "pin.fill")
-                    .font(.caption)
-                    .accessibilityLabel("Pinned")
-            }
-            Text(clip.copiedAt, format: .relative(presentation: .named, unitsStyle: .abbreviated))
-                .font(.caption)
-                .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
-                .fixedSize()
-        }
-    }
-}
-
-/// Small images for clip rows, made once per clip.
-@MainActor
-final class Thumbnails {
-    static let shared = Thumbnails()
-    private var cache: [UUID: NSImage] = [:]
-
-    func image(for clip: ClipItem) -> NSImage? {
-        if let image = cache[clip.uuid] { return image }
-        guard let data = clip.imageData, let source = CGImageSourceCreateWithData(data as CFData, nil),
-              let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, [
-                  kCGImageSourceCreateThumbnailFromImageAlways: true,
-                  kCGImageSourceThumbnailMaxPixelSize: 160,
-              ] as CFDictionary) else { return nil }
-        let image = NSImage(cgImage: cg, size: NSSize(width: cg.width / 2, height: cg.height / 2))
-        cache[clip.uuid] = image
-        return image
-    }
-}
-
-/// The panel gets Liquid Glass with rounded corners; the popover draws its own.
-private struct SurfaceBackground: ViewModifier {
-    let surface: Surface
-
-    func body(content: Content) -> some View {
-        switch surface {
-        case .panel:
-            content
-                .frame(width: PanelController.size.width, height: PanelController.size.height)
-                .glassEffect(.regular, in: .rect(cornerRadius: 20))
-        case .popover:
-            content.frame(width: 440, height: 480)
-        }
-    }
-}
-
-/// Reports the NSWindow a view sits in.
-struct WindowReader: NSViewRepresentable {
-    let found: (NSWindow?) -> Void
-
-    func makeNSView(context: Context) -> Probe {
-        let probe = Probe()
-        probe.found = found
-        return probe
-    }
-
-    func updateNSView(_ probe: Probe, context: Context) {}
-
-    final class Probe: NSView {
-        var found: ((NSWindow?) -> Void)?
-
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            let window = window
-            DispatchQueue.main.async { [found] in found?(window) }
-        }
-    }
-}
-
-/// The capture buttons under the Launcher search: full-contrast text on a
-/// tinted fill. The system bordered style washes out on the glass panel and
-/// in the popover, so these draw their own fill and hover state.
-private struct QuickActionStyle: ButtonStyle {
-    @State private var hovering = false
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.callout.weight(.medium))
-            .foregroundStyle(.primary)
-            .padding(.horizontal, Space.md)
-            .padding(.vertical, Space.xs + 2)
-            .background {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(hovering || configuration.isPressed ? AnyShapeStyle(.tint.opacity(0.25)) : AnyShapeStyle(.fill.secondary))
-            }
-            .contentShape(.rect)
-            .onHover { hovering = $0 }
-            .opacity(configuration.isPressed ? 0.7 : 1)
-    }
-}

@@ -464,7 +464,7 @@ Screens: settings-colors
 Acceptance:
 - [manual] Click copies "#RRGGBB"; ⌥-click copies "rgb(r, g, b)"; Escape cancels. Uses NSColorSampler (no Screen Recording needed).
 - [snap] The Colors page lists the last 12 picked colors; clicking one copies it.
-Status: todo
+Status: done
 
 ### S-061 Keep the Mac awake
 As the user, I turn on Keep Awake (indefinitely, 1 hour, or until a time) and the Mac does not sleep until it ends.
@@ -472,7 +472,7 @@ Screens: settings-keep-awake
 Acceptance:
 - [unit] The power assertion is created on start and released on end or quit.
 - [manual] With its own menu bar icon, the icon fills while active.
-Status: todo
+Status: done
 
 ### S-062 Snap the front window with a shortcut
 As the user, I press ⌃⌥ plus an arrow (or other keys) to move the front window to a half, third, maximize or center.
@@ -480,7 +480,29 @@ Screens: settings-windows
 Acceptance:
 - [unit] Frame math for halves, thirds, maximize and center on a screen with a menu bar and Dock is correct.
 - [manual] Works in Safari, Finder and Xcode; asks for Accessibility when first used.
-Status: todo
+Status: done
+
+### S-063 Copy text or a QR code from the screen
+As the user, I press ⌃⇧2 (or Screenshots > Text), drag over text or a QR code, and the text or link is copied.
+Screens: panel-screenshots
+Acceptance:
+- [self] Text drawn in an image is read; a QR code is read before any text.
+- [manual] A toast says how many words were copied, or "No text found".
+Status: done
+
+### S-064 Remove tracking from copied links
+As the user, links I copy lose utm_, fbclid and similar parameters before they are pasted or saved.
+Screens: settings-clipboard
+Acceptance:
+- [unit] Tracking parameters are removed; other parameters stay; non-links are untouched.
+- [snap] A switch on the Clipboard page turns it off.
+Status: done
+
+### S-065 Pin a screenshot to the screen
+As the user, I choose Pin to Screen on the preview card or a recent screenshot, and it floats above other windows until I close it.
+Acceptance:
+- [manual] Drag to move, drag an edge to resize keeping its shape, Esc or right-click > Close to close, right-click > Copy.
+Status: done
 
 ## Later
 

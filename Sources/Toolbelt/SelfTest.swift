@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import CoreImage
 import ScreenCaptureKit
 import SwiftData
 import ToolbeltKit
@@ -101,7 +102,7 @@ enum SelfTest {
             prefs.move(.clipboard, by: 1)
 
             check("tools from a newer version start on",
-                  ToolPrefs.newTools(savedOrder: [.launcher, .clipboard]) == [.screenshots, .recording])
+                  ToolPrefs.newTools(savedOrder: [.launcher, .clipboard]) == Array(Tool.allCases.dropFirst(2)))
 
             // S-015 clear history
             model.clearHistory()
@@ -139,6 +140,27 @@ enum SelfTest {
                 print("SKIP capture checks: this run may not record the screen")
             }
 
+            // S-061 Keep Awake
+            KeepAwake.shared.start(for: 60)
+            check("Keep Awake holds a power assertion", KeepAwake.shared.isOn && model.awakeUntil != nil)
+            KeepAwake.shared.stop()
+            check("Turn Off releases it", !KeepAwake.shared.isOn && model.awakeUntil == nil)
+
+            // S-060 colors
+            ColorPicker.shared.remember(RGB(r: 255, g: 128, b: 0))
+            ColorPicker.shared.remember(RGB(r: 0, g: 0, b: 0))
+            ColorPicker.shared.remember(RGB(r: 255, g: 128, b: 0))
+            check("recent colors are newest first without repeats", model.recentColors == ["#FF8000", "#000000"])
+            Toast.show("Self-test", symbol: "checkmark")
+
+            // S-063 text and QR codes, on drawn images so the screen is never read
+            let words = await TextGrabber.read(Self.render(text: "Toolbelt reads text"))
+            check("text in an image is read", words.text?.contains("Toolbelt reads text") == true && !words.isCode, words.text ?? "nothing")
+            if let qr = Self.renderQR("https://notchy.dev") {
+                let code = await TextGrabber.read(qr)
+                check("a QR code is read before text", code.isCode && code.text == "https://notchy.dev", code.text ?? "nothing")
+            }
+
             // S-002 secrets
             check("password manager copies are skipped",
                   ClipRules.shouldSkip(types: ["org.nspasteboard.ConcealedType"], sourceApp: nil))
@@ -146,6 +168,24 @@ enum SelfTest {
             print(failures == 0 ? "SELFTEST PASS \(count) checks" : "SELFTEST FAIL \(failures) of \(count) checks")
             finish(code: failures == 0 ? 0 : 1)
         }
+    }
+
+    /// Black text on white, at Retina size.
+    private static func render(text: String) -> CGImage {
+        let image = NSImage(size: NSSize(width: 600, height: 120), flipped: false) { rect in
+            NSColor.white.setFill()
+            rect.fill()
+            (text as NSString).draw(at: NSPoint(x: 20, y: 40), withAttributes: [.font: NSFont.systemFont(ofSize: 36)])
+            return true
+        }
+        return image.cgImage(forProposedRect: nil, context: nil, hints: nil)!
+    }
+
+    private static func renderQR(_ text: String) -> CGImage? {
+        guard let filter = CIFilter(name: "CIQRCodeGenerator") else { return nil }
+        filter.setValue(Data(text.utf8), forKey: "inputMessage")
+        guard let output = filter.outputImage?.transformed(by: CGAffineTransform(scaleX: 10, y: 10)) else { return nil }
+        return CIContext().createCGImage(output, from: output.extent)
     }
 
     private static func check(_ name: String, _ ok: Bool, _ detail: String = "") {

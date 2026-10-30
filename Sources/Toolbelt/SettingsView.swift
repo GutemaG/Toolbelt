@@ -54,6 +54,9 @@ struct SettingsView: View {
             case .clipboard: ToolSettings(tool: .clipboard)
             case .screenshots: ToolSettings(tool: .screenshots)
             case .recording: ToolSettings(tool: .recording)
+            case .colors: ToolSettings(tool: .colors)
+            case .windows: ToolSettings(tool: .windows)
+            case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
         }
@@ -64,7 +67,7 @@ struct SettingsView: View {
 
 /// Sidebar groups, in order. The first has no heading.
 enum SettingsGroup: String, CaseIterable, Identifiable {
-    case top, input, capture, app
+    case top, input, capture, windows, tools, app
 
     var id: String { rawValue }
 
@@ -73,6 +76,8 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
         case .top: ""
         case .input: "Input"
         case .capture: "Capture"
+        case .windows: "Windows"
+        case .tools: "Tools"
         case .app: "App"
         }
     }
@@ -80,7 +85,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, screenshots, recording, appearance
+    case settings, launcher, clipboard, screenshots, recording, colors, windows, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -90,7 +95,9 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: .top
         case .launcher, .clipboard: .input
-        case .screenshots, .recording: .capture
+        case .screenshots, .recording, .colors: .capture
+        case .windows: .windows
+        case .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -162,7 +169,7 @@ struct GeneralSettings: View {
     var body: some View {
         Section {
             PermissionRow(symbol: "hand.raised.fill", title: "Accessibility",
-                          detail: "Pastes clips into the app you were using.",
+                          detail: "Pastes clips into the app you were using, and moves windows.",
                           isOn: accessibility) {
                 _ = PanelController.canPaste(prompt: true)
                 open("Privacy_Accessibility")
@@ -370,11 +377,18 @@ struct ToolSettings: View {
             }
         case .screenshots:
             ScreenshotOptions()
+        case .colors:
+            ColorOptions()
+        case .windows:
+            WindowOptions()
+        case .keepAwake:
+            KeepAwakeOptions()
         case .recording:
             RecordingOptions()
         case .clipboard:
             Section {
                 LabeledContent("History", value: "Last \(ClipRules.historyLimit) clips")
+                CleanLinksToggle()
                 LabeledContent("Paste") {
                     Text("Return pastes, ⌥Return pastes as plain text.")
                         .font(.caption)
@@ -506,6 +520,84 @@ private struct SaveFolderRow: View {
                 }
                 .controlSize(.small)
             }
+        }
+    }
+}
+
+private struct CleanLinksToggle: View {
+    @AppStorage(ClipboardMonitor.cleanLinksKey) private var clean = true
+
+    var body: some View {
+        Toggle(isOn: $clean) {
+            Text("Remove tracking from copied links")
+            Text("Strips utm_, fbclid and similar from links you copy.")
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+    }
+}
+
+/// Settings > Colors: what a pick copies.
+private struct ColorOptions: View {
+    @AppStorage(ColorPicker.formatKey) private var format = ColorTextFormat.hex.rawValue
+
+    var body: some View {
+        Section {
+            Picker("Copy as", selection: $format) {
+                Text("Hex  #FF8000").tag(ColorTextFormat.hex.rawValue)
+                Text("RGB  rgb(255, 128, 0)").tag(ColorTextFormat.rgb.rawValue)
+                Text("HSL  hsl(30, 100%, 50%)").tag(ColorTextFormat.hsl.rawValue)
+            }
+            .pickerStyle(.radioGroup)
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("Picking a color needs no Screen Recording permission. Right-click a recent color to copy it in another format.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Settings > Windows: the shortcut for every position.
+private struct WindowOptions: View {
+    var body: some View {
+        Section {
+            ForEach(WindowPosition.allCases, id: \.self) { position in
+                LabeledContent {
+                    Text(position.shortcut.label).monospaced().foregroundStyle(.secondary)
+                } label: {
+                    Label(position.title, systemImage: position.symbol)
+                }
+            }
+        } header: {
+            Text("Shortcuts")
+        } footer: {
+            Text("Moves the front window on the screen it is on. Needs Accessibility.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Settings > Keep Awake.
+private struct KeepAwakeOptions: View {
+    @AppStorage(KeepAwake.displayKey) private var display = true
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $display) {
+                Text("Keep the display on too")
+                Text("When off, the screen can still dim and sleep; only the Mac stays awake.")
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("Give Keep Awake its own menu bar icon to see at a glance when it is on.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
     }
 }

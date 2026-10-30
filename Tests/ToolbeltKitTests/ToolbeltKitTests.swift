@@ -102,3 +102,37 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(CaptureRules.elapsed(65) == "1:05")
     #expect(CaptureRules.elapsed(3723) == "1:02:03")
 }
+
+@Test func colorFormats() {
+    let orange = RGB(r: 255, g: 128, b: 0)
+    #expect(orange.hex == "#FF8000")
+    #expect(orange.rgb == "rgb(255, 128, 0)")
+    #expect(orange.hsl == "hsl(30, 100%, 50%)")
+    #expect(RGB(hex: "#ff8000") == orange)
+    #expect(RGB(hex: "nope") == nil)
+    #expect(RGB(red: 1, green: 0.5, blue: 0) == orange)
+    #expect(RGB(r: 128, g: 128, b: 128).hsl == "hsl(0, 0%, 50%)")
+}
+
+@Test func windowPositions() {
+    // A 1440×875 visible frame starting 25 pt up (above the Dock).
+    let screen = CGRect(x: 0, y: 25, width: 1440, height: 875)
+    let window = CGRect(x: 100, y: 100, width: 800, height: 600)
+    #expect(WindowPosition.leftHalf.frame(in: screen, current: window) == CGRect(x: 0, y: 25, width: 720, height: 875))
+    #expect(WindowPosition.rightHalf.frame(in: screen, current: window) == CGRect(x: 720, y: 25, width: 720, height: 875))
+    #expect(WindowPosition.centerThird.frame(in: screen, current: window) == CGRect(x: 480, y: 25, width: 480, height: 875))
+    #expect(WindowPosition.maximize.frame(in: screen, current: window) == screen)
+    #expect(WindowPosition.center.frame(in: screen, current: window) == CGRect(x: 320, y: 163, width: 800, height: 600))
+    // On a 900 pt tall main screen, a frame whose top is at 875 pt sits 25 pt below the top edge (under the menu bar).
+    #expect(WindowPosition.axFrame(CGRect(x: 0, y: 25, width: 720, height: 850), mainScreenHeight: 900)
+            == CGRect(x: 0, y: 25, width: 720, height: 850))
+}
+
+@Test func linksAreCleaned() {
+    #expect(LinkCleaner.clean("https://shop.com/item?id=4&utm_source=news&utm_medium=email") == "https://shop.com/item?id=4")
+    #expect(LinkCleaner.clean("https://site.com/a?fbclid=XYZ") == "https://site.com/a")
+    #expect(LinkCleaner.clean("https://youtu.be/abc?si=123") == "https://youtu.be/abc")
+    #expect(LinkCleaner.clean("https://example.com/search?q=si") == nil)
+    #expect(LinkCleaner.clean("https://example.com/") == nil)
+    #expect(LinkCleaner.clean("not a link?utm_source=x") == nil)
+}

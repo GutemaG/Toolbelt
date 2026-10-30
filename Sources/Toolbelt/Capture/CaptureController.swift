@@ -46,7 +46,7 @@ final class CaptureController {
         }
     }
 
-    private func image(for selection: Selection) async -> CGImage? {
+    func image(for selection: Selection) async -> CGImage? {
         guard let content = try? await SCShareableContent.excludingDesktopWindows(false, onScreenWindowsOnly: true) else { return nil }
         switch selection {
         case .area(let display, let rect, let frozen, let scale):
