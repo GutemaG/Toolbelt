@@ -25,30 +25,66 @@ struct ToolbeltApp: App {
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let model = AppModel(container: Store.makeContainer())
+    private var statusItems: StatusItems!
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // No Dock icon. Info.plist says so too (LSUIElement), this covers a run from the terminal.
+        // No Dock icon unless Settings says so. Info.plist says so too (LSUIElement), this covers a run from the terminal.
         NSApp.setActivationPolicy(.accessory)
         PanelController.shared = PanelController(model: model)
-        StatusItemController.shared = StatusItemController(model: model)
+        statusItems = StatusItems(model: model)
+        StatusItems.shared = statusItems
 
         SeedData.insertIfRequested(into: model)
         if SelfTest.requested || Snapshot.requested {
+            statusItems.apply(ToolPrefs.shared)
             SelfTest.runIfRequested(model: model)
             Snapshot.runIfRequested(model: model)
             return
         }
-        model.clipboard.start()
         model.apps.refresh()
-        Hotkeys.shared.register("Open Launcher", keyCode: kVK_Space, modifiers: optionKey) {
-            PanelController.shared.toggle(.launcher)
+        ToolPrefs.shared.onChange = { [weak self] in self?.apply() }
+        apply()
+    }
+
+    /// Makes the menu bar, shortcuts, clipboard watcher and Dock match ToolPrefs.
+    private func apply() {
+        let prefs = ToolPrefs.shared
+        statusItems.apply(prefs)
+
+        Hotkeys.shared.unregisterAll()
+        if prefs.enabled.contains(.launcher) {
+            Hotkeys.shared.register(Tool.launcher.title, keyCode: kVK_Space, modifiers: optionKey) {
+                PanelController.shared.toggle(.launcher)
+            }
         }
-        Hotkeys.shared.register("Open Clipboard", keyCode: kVK_ANSI_V, modifiers: cmdKey | shiftKey) {
-            PanelController.shared.toggle(.clipboard)
+        if prefs.enabled.contains(.clipboard) {
+            Hotkeys.shared.register(Tool.clipboard.title, keyCode: kVK_ANSI_V, modifiers: cmdKey | shiftKey) {
+                PanelController.shared.toggle(.clipboard)
+            }
+            model.clipboard.start()
+        } else {
+            model.clipboard.stop()
+        }
+        if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
+
+        let policy: NSApplication.ActivationPolicy = prefs.showInDock ? .regular : .accessory
+        if NSApp.activationPolicy() != policy {
+            NSApp.setActivationPolicy(policy)
+            // Switching hides windows for a moment; keep Settings in front.
+            if SettingsWindow.shared.isVisible {
+                NSApp.activate()
+                SettingsWindow.shared.window?.makeKeyAndOrderFront(nil)
+            }
         }
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { false }
+
+    /// With the Dock icon on, clicking it opens Settings.
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool) -> Bool {
+        if !hasVisibleWindows { SettingsWindow.shared.show(model: model) }
+        return true
+    }
 
     /// The self-test's result becomes the exit code, after a normal quit.
     func applicationWillTerminate(_ notification: Notification) {
@@ -56,19 +92,65 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
-/// The menu bar icon. A click opens the popover; a right-click shows a menu.
-final class StatusItemController: NSObject, NSPopoverDelegate {
-    static var shared: StatusItemController?
+/// All of Toolbelt's menu bar icons: the Toolbelt icon with every tool, plus
+/// one icon per tool that has "Show in the menu bar" on.
+final class StatusItems {
+    static var shared: StatusItems?
     private let model: AppModel
-    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-    private let popover = NSPopover()
+    private var main: StatusItemController?
+    private(set) var tools: [Tool: StatusItemController] = [:]
 
     init(model: AppModel) {
         self.model = model
+    }
+
+    func apply(_ prefs: ToolPrefs) {
+        if prefs.showMainIcon && !prefs.panelTools.isEmpty {
+            if main == nil { main = StatusItemController(model: model, tool: nil) }
+        } else {
+            main?.remove()
+            main = nil
+        }
+        let wanted = Set(Tool.allCases.filter { prefs.enabled.contains($0) && prefs.ownIcon.contains($0) })
+        for (tool, controller) in tools where !wanted.contains(tool) {
+            controller.remove()
+            tools[tool] = nil
+        }
+        for tool in Tool.allCases where wanted.contains(tool) && tools[tool] == nil {
+            tools[tool] = StatusItemController(model: model, tool: tool)
+        }
+    }
+
+    func closePopovers() {
+        main?.closePopover()
+        tools.values.forEach { $0.closePopover() }
+    }
+
+    /// Shows the Toolbelt popover, or the first tool icon when it is hidden.
+    func showMainPopover() {
+        (main ?? tools.values.first)?.showPopover()
+    }
+}
+
+/// One menu bar icon. A click opens its popover; a right-click shows a menu.
+/// `tool` nil is the Toolbelt icon, which shows every tool in the panel.
+final class StatusItemController: NSObject, NSPopoverDelegate {
+    private let model: AppModel
+    let tool: Tool?
+    private let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
+    private let popover = NSPopover()
+
+    init(model: AppModel, tool: Tool?) {
+        self.model = model
+        self.tool = tool
         super.init()
+        // Keeps the icon's place in the menu bar across launches.
+        item.autosaveName = "toolbelt." + (tool?.rawValue ?? "main")
+        item.behavior = .removalAllowed
         if let button = item.button {
-            button.image = NSImage(systemSymbolName: "wrench.and.screwdriver", accessibilityDescription: "Toolbelt")
-            button.toolTip = "Toolbelt"
+            button.image = NSImage(systemSymbolName: tool?.symbol ?? "wrench.and.screwdriver",
+                                   accessibilityDescription: tool?.title ?? "Toolbelt")
+            button.toolTip = tool?.title ?? "Toolbelt"
             button.target = self
             button.action = #selector(clicked)
             button.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -77,11 +159,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         popover.animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         popover.delegate = self
         popover.contentViewController = NSHostingController(rootView:
-            ToolbeltView(surface: .popover)
+            ToolbeltView(surface: .popover, fixedTool: tool)
                 .environment(model)
                 .modelContainer(model.container)
                 .themed()
         )
+    }
+
+    func remove() {
+        closePopover()
+        NSStatusBar.system.removeStatusItem(item)
     }
 
     @objc private func clicked(_ sender: NSStatusBarButton) {
@@ -97,6 +184,8 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     func showPopover() {
         guard let button = item.button else { return }
         PanelController.shared.hide()
+        StatusItems.shared?.closePopovers()
+        if let tool { model.tool = tool }
         model.openCount += 1
         NSApp.activate()
         popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
@@ -104,19 +193,23 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     func closePopover() {
-        popover.performClose(nil)
+        if popover.isShown { popover.performClose(nil) }
     }
 
     /// Hand focus back to the app that was in front before the popover opened.
     func popoverDidClose(_ notification: Notification) {
         // Not while an Open panel (Other App…) or Settings is up: hiding would close it.
-        if !SettingsWindow.shared.isVisible, NSApp.modalWindow == nil { NSApp.hide(nil) }
+        if !SettingsWindow.shared.isVisible, NSApp.modalWindow == nil, !ToolPrefs.shared.showInDock { NSApp.hide(nil) }
     }
 
     private func showMenu() {
         let menu = NSMenu()
-        menu.addItem(withTitle: "Open Launcher", action: #selector(openLauncher), keyEquivalent: "").target = self
-        menu.addItem(withTitle: "Open Clipboard", action: #selector(openClipboard), keyEquivalent: "").target = self
+        for tool in ToolPrefs.shared.panelOrder where ToolPrefs.shared.enabled.contains(tool) {
+            let entry = NSMenuItem(title: "Open \(tool.title)", action: #selector(openTool), keyEquivalent: "")
+            entry.target = self
+            entry.representedObject = tool.rawValue
+            menu.addItem(entry)
+        }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
         menu.addItem(withTitle: "Quit Toolbelt", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
@@ -125,9 +218,16 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         item.menu = nil
     }
 
-    @objc private func openLauncher() { PanelController.shared.show(.launcher) }
-    @objc private func openClipboard() { PanelController.shared.show(.clipboard) }
-    @objc private func openSettings() { SettingsWindow.shared.show(model: model) }
+    @objc private func openTool(_ sender: NSMenuItem) {
+        if let raw = sender.representedObject as? String, let tool = Tool(rawValue: raw) {
+            PanelController.shared.show(tool)
+        }
+    }
+
+    @objc private func openSettings() {
+        if let tool { model.settingsPage = SettingsPage(rawValue: tool.rawValue) ?? .settings }
+        SettingsWindow.shared.show(model: model)
+    }
 }
 
 /// The Settings window, made by hand because a menu bar app has no
@@ -141,15 +241,22 @@ final class SettingsWindow {
     func show(model: AppModel) {
         if window == nil {
             let host = NSHostingController(rootView: SettingsView().environment(model).themed())
-            host.sizingOptions = .preferredContentSize
             let window = NSWindow(contentViewController: host)
             window.title = "Toolbelt Settings"
-            window.styleMask = [.titled, .closable]
+            window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            // An empty unified toolbar gives the sidebar its full-height glass.
+            window.toolbar = NSToolbar(identifier: "settings")
+            window.toolbarStyle = .unified
+            window.setContentSize(NSSize(width: 820, height: 640))
+            window.contentMinSize = NSSize(width: 720, height: 480)
             window.isReleasedWhenClosed = false
+            window.setFrameAutosaveName("ToolbeltSettings")
+            window.center()
             self.window = window
         }
         NSApp.activate()
-        window?.center()
         window?.makeKeyAndOrderFront(nil)
     }
 }

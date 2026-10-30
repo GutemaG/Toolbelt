@@ -60,8 +60,8 @@ enum Snapshot {
                 try? await Task.sleep(for: .seconds(1))
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
-                    for tab in SettingsTab.allCases {
-                        model.settingsTab = tab
+                    for tab in SettingsPage.allCases {
+                        model.settingsPage = tab
                         try? await Task.sleep(for: .seconds(0.8))
                         capture(to: "\(dir)/settings-\(tab.rawValue)-\(mode).png", window: SettingsWindow.shared.window)
                     }

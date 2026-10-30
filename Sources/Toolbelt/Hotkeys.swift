@@ -6,15 +6,18 @@ import Carbon.HIToolbox
 final class Hotkeys {
     static let shared = Hotkeys()
     private var handlers: [UInt32: () -> Void] = [:]
+    private var names: [UInt32: String] = [:]
     private var refs: [EventHotKeyRef] = []
     private var installed = false
+    private var nextID: UInt32 = 0
     /// Shortcuts that failed to register, usually because another app owns them.
     private(set) var failed: [String] = []
 
     /// Registers keyCode + Carbon modifiers (optionKey, cmdKey, shiftKey, controlKey).
     func register(_ name: String, keyCode: Int, modifiers: Int, action: @escaping () -> Void) {
         installHandler()
-        let id = UInt32(handlers.count + 1)
+        nextID += 1
+        let id = nextID
         var ref: EventHotKeyRef?
         let status = RegisterEventHotKey(UInt32(keyCode), UInt32(modifiers),
                                          EventHotKeyID(signature: OSType(0x544F4F4C), id: id), // 'TOOL'
@@ -25,6 +28,18 @@ final class Hotkeys {
         }
         refs.append(ref)
         handlers[id] = action
+        names[id] = name
+    }
+
+    func isRegistered(_ name: String) -> Bool { names.values.contains(name) }
+
+    /// Removes every shortcut, so the enabled tools can register again.
+    func unregisterAll() {
+        refs.forEach { UnregisterEventHotKey($0) }
+        refs = []
+        handlers = [:]
+        names = [:]
+        failed = []
     }
 
     fileprivate func fire(_ id: UInt32) {

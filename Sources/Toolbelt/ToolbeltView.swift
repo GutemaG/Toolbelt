@@ -13,6 +13,8 @@ enum Surface {
 /// popover and the floating panel.
 struct ToolbeltView: View {
     let surface: Surface
+    /// Set for a tool's own menu bar icon: shows only that tool, no picker.
+    var fixedTool: Tool? = nil
     @Environment(AppModel.self) private var model
     @Query(sort: \ClipItem.copiedAt, order: .reverse) private var clips: [ClipItem]
     @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) private var pinnedLaunches: [AppLaunch]
@@ -23,6 +25,9 @@ struct ToolbeltView: View {
     @State private var window: NSWindow?
     @State private var monitor: Any?
     @FocusState private var searchFocused: Bool
+
+    private var tool: Tool { fixedTool ?? model.tool }
+    private var panelTools: [Tool] { ToolPrefs.shared.panelTools }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -44,7 +49,7 @@ struct ToolbeltView: View {
             query = ""
             selected = 0
             model.pickingApps = false
-            if model.tool == .launcher { model.apps.refresh() }
+            if tool == .launcher { model.apps.refresh() }
         }
         .onChange(of: query) { selected = 0 }
     }
@@ -61,7 +66,7 @@ struct ToolbeltView: View {
                 .textFieldStyle(.plain)
                 .font(.title2)
                 .focused($searchFocused)
-                .accessibilityLabel(model.tool == .launcher ? "Search apps" : "Search clips")
+                .accessibilityLabel(tool == .launcher ? "Search apps" : "Search clips")
             if !query.isEmpty {
                 Button("Clear", systemImage: "xmark.circle.fill") { query = "" }
                     .labelStyle(.iconOnly)
@@ -69,24 +74,26 @@ struct ToolbeltView: View {
                     .foregroundStyle(.secondary)
                     .help("Clear the search")
             }
-            Picker("Tool", selection: $model.tool) {
-                ForEach(Tool.allCases) { tool in
-                    Label(tool.title, systemImage: tool.symbol)
-                        .labelStyle(.iconOnly)
-                        .help(tool.help)
-                        .tag(tool)
+            if fixedTool == nil, panelTools.count > 1 {
+                Picker("Tool", selection: $model.tool) {
+                    ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
+                        Label(tool.title, systemImage: tool.symbol)
+                            .labelStyle(.iconOnly)
+                            .help("\(tool.help) (⌘\(index + 1))")
+                            .tag(tool)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+                .fixedSize()
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
-            .fixedSize()
         }
         .padding(.horizontal, Space.lg)
         .padding(.vertical, Space.md)
     }
 
     private var placeholder: String {
-        if model.tool == .clipboard { return "Search Clips" }
+        if tool == .clipboard { return "Search Clips" }
         return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
     }
 
@@ -261,10 +268,10 @@ struct ToolbeltView: View {
     private var emptyState: some View {
         if !query.isEmpty {
             ContentUnavailableView("No Results", systemImage: "magnifyingglass",
-                                   description: Text(model.tool == .launcher
+                                   description: Text(tool == .launcher
                                                      ? "No apps match “\(query)”."
                                                      : "No clips match “\(query)”."))
-        } else if model.tool == .clipboard {
+        } else if tool == .clipboard {
             ContentUnavailableView("No Clips Yet", systemImage: "doc.on.clipboard",
                                    description: Text("Copy something and it shows up here."))
         } else {
@@ -299,7 +306,7 @@ struct ToolbeltView: View {
     }
 
     private var hint: String {
-        switch model.tool {
+        switch tool {
         case .launcher: return model.pickingApps ? "↩ Pin or Unpin   esc Done" : "↩ Open   ⌘P Pin"
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
@@ -351,7 +358,7 @@ struct ToolbeltView: View {
     }
 
     private var sections: [Section] {
-        switch model.tool {
+        switch tool {
         case .launcher:
             let candidates = model.launchCandidates()
             if model.pickingApps {
@@ -443,14 +450,14 @@ struct ToolbeltView: View {
         // Come back to the Launcher so the new tiles are in view.
         switch surface {
         case .panel: PanelController.shared.show(.launcher)
-        case .popover: StatusItemController.shared?.showPopover()
+        case .popover: StatusItems.shared?.showMainPopover()
         }
     }
 
     private func close() {
         switch surface {
         case .panel: PanelController.shared.hide()
-        case .popover: StatusItemController.shared?.closePopover()
+        case .popover: StatusItems.shared?.closePopovers()
         }
     }
 
@@ -496,10 +503,11 @@ struct ToolbeltView: View {
             if let current { activate(current, plainText: flags.contains(.option)) }
         case (53, _): // Escape
             if !query.isEmpty { query = "" } else if model.pickingApps { stopPicking() } else { close() }
-        case (48, false): // Tab switches tool
-            model.tool = model.tool == .launcher ? .clipboard : .launcher
-        case (18, true): model.tool = .launcher   // Command-1
-        case (19, true): model.tool = .clipboard  // Command-2
+        case (48, false) where fixedTool == nil && panelTools.count > 1: // Tab switches tool
+            let index = panelTools.firstIndex(of: model.tool) ?? 0
+            model.tool = panelTools[(index + 1) % panelTools.count]
+        case (18, true) where fixedTool == nil && panelTools.count > 0: model.tool = panelTools[0] // Command-1
+        case (19, true) where fixedTool == nil && panelTools.count > 1: model.tool = panelTools[1] // Command-2
         case (43, true): openSettings()            // Command-,
         case (12, true): NSApp.terminate(nil)      // Command-Q
         case (35, true): // Command-P pins a clip or an app

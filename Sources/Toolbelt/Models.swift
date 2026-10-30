@@ -45,34 +45,6 @@ final class AppLaunch {
     }
 }
 
-/// The tools in Toolbelt. Each one is a tab in the popover and the panel.
-enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .launcher: "Launcher"
-        case .clipboard: "Clipboard"
-        }
-    }
-
-    var symbol: String {
-        switch self {
-        case .launcher: "magnifyingglass"
-        case .clipboard: "doc.on.clipboard"
-        }
-    }
-
-    var help: String {
-        switch self {
-        case .launcher: "Find and open apps (⌘1)"
-        case .clipboard: "Search clipboard history (⌘2)"
-        }
-    }
-}
-
 /// App-wide state that the popover, the panel, and Settings share.
 @Observable
 final class AppModel {
@@ -83,9 +55,9 @@ final class AppModel {
     var tool: Tool = Tool(rawValue: UserDefaults.standard.string(forKey: "tool") ?? "") ?? .launcher {
         didSet { if !Store.isOverridden { UserDefaults.standard.set(tool.rawValue, forKey: "tool") } }
     }
-    /// Settings reopens on the last tab. Test and snapshot runs leave it alone.
-    var settingsTab: SettingsTab = SettingsTab(rawValue: UserDefaults.standard.string(forKey: "settings.tab") ?? "") ?? .general {
-        didSet { if !Store.isOverridden { UserDefaults.standard.set(settingsTab.rawValue, forKey: "settings.tab") } }
+    /// Settings reopens on the last page. Test and snapshot runs leave it alone.
+    var settingsPage: SettingsPage = SettingsPage(rawValue: UserDefaults.standard.string(forKey: "settings.page") ?? "") ?? .settings {
+        didSet { if !Store.isOverridden { UserDefaults.standard.set(settingsPage.rawValue, forKey: "settings.page") } }
     }
     /// Bumped each time a surface opens, so views reset their search and selection.
     var openCount = 0
@@ -219,6 +191,17 @@ final class AppModel {
     func delete(_ clip: ClipItem) {
         context.delete(clip)
         try? context.save()
+    }
+
+    /// Deletes every unpinned clip.
+    func clearHistory() {
+        let clips = (try? context.fetch(FetchDescriptor<ClipItem>(predicate: #Predicate { !$0.isPinned }))) ?? []
+        for clip in clips { context.delete(clip) }
+        try? context.save()
+    }
+
+    func unpinnedClipCount() -> Int {
+        (try? context.fetchCount(FetchDescriptor<ClipItem>(predicate: #Predicate { !$0.isPinned }))) ?? 0
     }
 
     /// Keeps at most ClipRules.historyLimit unpinned clips.

@@ -18,12 +18,19 @@ final class ClipboardMonitor {
 
     func start() {
         guard task == nil else { return }
+        lastChange = pasteboard.changeCount
         task = Task { [weak self] in
             while !Task.isCancelled {
                 try? await Task.sleep(for: .milliseconds(500))
                 self?.check()
             }
         }
+    }
+
+    /// Stops watching; a turned-off Clipboard uses no power.
+    func stop() {
+        task?.cancel()
+        task = nil
     }
 
     func check() {

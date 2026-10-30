@@ -217,7 +217,7 @@ Depends: S-013
 Acceptance:
 - [snap] A confirmation names the count ("Clear 214 Clips?" with "Pinned clips stay.") and buttons "Clear History" and "Cancel".
 - [unit] Only unpinned items are removed.
-Status: todo
+Status: done
 
 ### S-016 Record copied images
 As the user, I copy an image or take a screenshot to the clipboard and it is
@@ -343,7 +343,7 @@ Acceptance:
 - [snap] Sidebar groups and pages match the brief; the selected page shows a header with its icon, title and one-line description.
 - [snap] Each page is one grouped Form; no page scrolls when it fits.
 - [self] Settings reopens on the last page.
-Status: todo
+Status: done
 
 ### S-031 See and grant permissions in one place
 As the user, I see Accessibility and Screen Recording with On/Off status and what each is for, and a button that opens the right System Settings pane.
@@ -352,7 +352,7 @@ Depends: S-030
 Acceptance:
 - [snap] Each permission row has an icon, name, one-line purpose, and an "On" badge or "Allow…" button.
 - [manual] Status updates within 2 seconds of granting in System Settings, without reopening the window.
-Status: todo
+Status: done
 
 ### S-032 Turn a tool on or off
 As the user, I switch a tool off on its page and it disappears from the panel, its shortcut stops, and it uses no CPU.
@@ -361,7 +361,7 @@ Depends: S-030
 Acceptance:
 - [self] A disabled tool has no registered shortcut, no status item and no running timers.
 - [snap] Each tool page starts with an "Enabled" switch and the tool's shortcut.
-Status: todo
+Status: done
 
 ### S-033 Give a tool its own menu bar icon
 As the user, I turn on "Show in menu bar" for a tool and it gets its own icon that opens just that tool.
@@ -371,7 +371,7 @@ Acceptance:
 - [manual] The icon keeps its position after relaunch (autosaveName).
 - [manual] Clicking it opens that tool alone; a Toolbelt icon still shows all tools.
 - [self] Turning it off removes the item.
-Status: todo
+Status: done
 
 ### S-034 Order the tools in the menu bar panel
 As the user, I move tools up and down and switch them on or off in "Menu bar panel", and the Toolbelt panel shows them in that order.
@@ -380,7 +380,7 @@ Depends: S-032
 Acceptance:
 - [snap] Rows have icon, name, description, up/down buttons and a switch, like the reference.
 - [self] Order and switches survive relaunch.
-Status: todo
+Status: done
 
 ### S-035 Show or hide Toolbelt in the Dock and menu bar
 As the user, I choose whether Toolbelt shows in the Dock and whether its main menu bar icon shows.
@@ -389,7 +389,7 @@ Depends: S-030
 Acceptance:
 - [manual] Show in Dock switches at once and Settings stays in front.
 - [manual] Hiding the main icon is refused with a note when no tool has its own icon and no shortcut is set.
-Status: todo
+Status: done
 
 ## V2-M2 Screenshots
 

@@ -1,108 +1,234 @@
+import ApplicationServices
 import ServiceManagement
 import SwiftUI
 import ToolbeltKit
 
-/// The Settings window. One tab per topic, at most about six. Each tab is a
-/// grouped Form that sizes to its content, so the window grows to fit and
-/// shows no scroll bar it does not need.
+/// The Settings window: a sidebar of pages, because a suite of tools has
+/// more than six topics. Each page is a header plus one grouped Form.
+/// Settings apply at once; there is no Save button.
 struct SettingsView: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
         @Bindable var model = model
-        TabView(selection: $model.settingsTab) {
-            ForEach(SettingsTab.allCases) { tab in
-                page(tab)
-                    .tabItem { Label(tab.title, systemImage: tab.symbol) }
-                    .tag(tab)
+        NavigationSplitView {
+            List(selection: $model.settingsPage) {
+                ForEach(SettingsGroup.allCases) { group in
+                    let pages = SettingsPage.allCases.filter { $0.group == group }
+                    if group == .top {
+                        rows(pages)
+                    } else {
+                        Section(group.title) { rows(pages) }
+                    }
+                }
             }
+            .navigationSplitViewColumnWidth(min: 200, ideal: 212, max: 260)
+        } detail: {
+            page(model.settingsPage)
+                .navigationSplitViewColumnWidth(min: 480, ideal: 560)
         }
         .noInitialFocus()
     }
 
+    private func rows(_ pages: [SettingsPage]) -> some View {
+        ForEach(pages) { page in
+            Label {
+                Text(page.title)
+            } icon: {
+                IconTile(symbol: page.symbol, tint: page.tint)
+            }
+            .tag(page)
+        }
+    }
+
     @ViewBuilder
-    private func page(_ tab: SettingsTab) -> some View {
+    private func page(_ page: SettingsPage) -> some View {
         Form {
-            switch tab {
-            case .general: GeneralSettings()
+            Section {
+            } header: {
+                PageHeader(page: page)
+            }
+            switch page {
+            case .settings: GeneralSettings()
+            case .launcher: ToolSettings(tool: .launcher)
+            case .clipboard: ToolSettings(tool: .clipboard)
             case .appearance: AppearanceSettings()
             }
         }
         .formStyle(.grouped)
-        .fitsContent()
-        .frame(width: 520)
+        .id(page)
     }
 }
 
-/// The Settings tabs. Snapshot mode walks through every case.
-enum SettingsTab: String, CaseIterable, Identifiable {
-    case general, appearance
+/// Sidebar groups, in order. The first has no heading.
+enum SettingsGroup: String, CaseIterable, Identifiable {
+    case top, input, app
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
-        case .general: "General"
+        case .top: ""
+        case .input: "Input"
+        case .app: "App"
+        }
+    }
+}
+
+/// The Settings pages. Snapshot mode walks through every case.
+enum SettingsPage: String, CaseIterable, Identifiable {
+    case settings, launcher, clipboard, appearance
+
+    var id: String { rawValue }
+
+    var tool: Tool? { Tool(rawValue: rawValue) }
+
+    var group: SettingsGroup {
+        switch self {
+        case .settings: .top
+        case .launcher, .clipboard: .input
+        case .appearance: .app
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .settings: "Settings"
         case .appearance: "Appearance"
+        default: tool?.title ?? ""
         }
     }
 
     var symbol: String {
         switch self {
-        case .general: "gearshape"
-        case .appearance: "paintpalette"
+        case .settings: "gearshape.fill"
+        case .appearance: "paintpalette.fill"
+        default: tool?.symbol ?? "questionmark"
+        }
+    }
+
+    var tint: Color {
+        switch self {
+        case .settings: .indigo
+        case .appearance: .pink
+        default: tool?.tint ?? .gray
+        }
+    }
+
+    var summary: String {
+        switch self {
+        case .settings: "Permissions, menu bar, Dock and startup."
+        case .appearance: "The accent color for every tool."
+        default: tool?.summary ?? ""
         }
     }
 }
 
+/// The big icon, title and one line at the top of a page.
+private struct PageHeader: View {
+    let page: SettingsPage
+
+    var body: some View {
+        HStack(spacing: Space.md) {
+            IconTile(symbol: page.symbol, tint: page.tint, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(page.title)
+                    .font(.title2.weight(.semibold))
+                    .foregroundStyle(.primary)
+                Text(page.summary)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.bottom, Space.sm)
+        .textCase(nil)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// Settings > Settings: permissions, menu bar and Dock, the menu bar panel.
 struct GeneralSettings: View {
+    @Bindable private var prefs = ToolPrefs.shared
     @State private var openAtLogin = SMAppService.mainApp.status == .enabled
-    @State private var canPaste = PanelController.canPaste(prompt: false)
     @State private var loginError: String?
+    @State private var accessibility = AXIsProcessTrusted()
+    @State private var screenRecording = CGPreflightScreenCaptureAccess()
 
     var body: some View {
         Section {
-            Toggle("Open at login", isOn: $openAtLogin)
-                .onChange(of: openAtLogin) { _, on in setOpenAtLogin(on) }
-            if let loginError {
-                Text(loginError).font(.caption).foregroundStyle(.red)
+            PermissionRow(symbol: "hand.raised.fill", title: "Accessibility",
+                          detail: "Pastes clips into the app you were using.",
+                          isOn: accessibility) {
+                _ = PanelController.canPaste(prompt: true)
+                open("Privacy_Accessibility")
             }
-        }
-        Section("Shortcuts") {
-            LabeledContent("Open Launcher", value: "⌥Space")
-            LabeledContent("Open Clipboard", value: "⇧⌘V")
-            ForEach(Hotkeys.shared.failed, id: \.self) { name in
-                Text("Unable to use the shortcut for “\(name)”. Another app uses it.")
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-        }
-        Section {
-            LabeledContent("Paste into apps") {
-                if canPaste {
-                    Label("Allowed", systemImage: "checkmark.circle.fill")
-                        .foregroundStyle(.green)
-                } else {
-                    Button("Allow in Privacy Settings…") {
-                        _ = PanelController.canPaste(prompt: true)
-                        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
-                    }
-                }
+            PermissionRow(symbol: "record.circle", title: "Screen Recording",
+                          detail: "Screenshots and screen recordings, when those tools arrive.",
+                          isOn: screenRecording) {
+                CGRequestScreenCaptureAccess()
+                open("Privacy_ScreenCapture")
             }
         } header: {
-            Text("Clipboard")
+            // Follows the page header, which would otherwise make it render light; match the other headings.
+            Text("Permissions").font(.headline).foregroundStyle(.primary)
         } footer: {
-            Text("Keeps the last \(ClipRules.historyLimit) clips. Pinned clips are always kept. Pasting into the app you were using needs Accessibility; without it, Return only copies.")
+            Text("Toolbelt asks for a permission only when a tool needs it. After you allow Screen Recording, macOS may ask you to quit and reopen Toolbelt.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
         .task {
-            // Nothing calls the app back when Accessibility is granted. Check while Settings is open.
+            // Nothing calls the app back when a permission changes. Check while the page is open.
             while !Task.isCancelled {
-                canPaste = PanelController.canPaste(prompt: false)
+                accessibility = AXIsProcessTrusted()
+                screenRecording = CGPreflightScreenCaptureAccess()
                 try? await Task.sleep(for: .seconds(1.5))
             }
         }
+
+        Section("Menu bar and Dock") {
+            Toggle(isOn: $prefs.showMainIcon) {
+                Text("Show Toolbelt in the menu bar")
+                Text(prefs.ownIcon.intersection(prefs.enabled).isEmpty
+                     ? "One icon with every tool. To hide it, first give a tool its own icon."
+                     : "One icon with every tool. Tools with their own icon stay either way.")
+            }
+            .disabled(prefs.showMainIcon && prefs.ownIcon.intersection(prefs.enabled).isEmpty)
+            Toggle(isOn: $prefs.showInDock) {
+                Text("Show Toolbelt in the Dock")
+                Text("Also shows Toolbelt in ⌘Tab.")
+            }
+            Toggle(isOn: $openAtLogin) {
+                Text("Open at login")
+                Text("Start Toolbelt when you log in to this Mac.")
+            }
+            .onChange(of: openAtLogin) { _, on in setOpenAtLogin(on) }
+            if let loginError {
+                Label(loginError, systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+
+        Section {
+            ForEach(prefs.panelOrder) { tool in
+                PanelToolRow(tool: tool, prefs: prefs)
+            }
+        } header: {
+            Text("Menu bar panel")
+        } footer: {
+            Text(prefs.showMainIcon || !prefs.ownIcon.isEmpty
+                 ? "The tools the Toolbelt icon and panel show, in this order. A tool that is off in its own page never shows."
+                 : "The Toolbelt icon is hidden. Open the panel with a tool's shortcut.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+
+    private func open(_ pane: String) {
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?\(pane)")!)
     }
 
     private func setOpenAtLogin(_ on: Bool) {
@@ -113,5 +239,154 @@ struct GeneralSettings: View {
             loginError = "Unable to change Open at login: \(error.localizedDescription)"
         }
         openAtLogin = SMAppService.mainApp.status == .enabled
+    }
+}
+
+/// One permission: what it is for, and "On" or a button that opens System Settings.
+private struct PermissionRow: View {
+    let symbol: String
+    let title: String
+    let detail: String
+    let isOn: Bool
+    let allow: () -> Void
+
+    var body: some View {
+        LabeledContent {
+            if isOn {
+                Label("On", systemImage: "circle.fill")
+                    .labelStyle(StatusBadgeStyle())
+                    .accessibilityLabel("\(title) is allowed")
+            } else {
+                Button("Allow…", action: allow)
+                    .controlSize(.small)
+                    .help("Open Privacy & Security in System Settings")
+            }
+        } label: {
+            HStack(spacing: Space.sm) {
+                Image(systemName: symbol)
+                    .foregroundStyle(.tint)
+                    .frame(width: 20)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                    Text(detail).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+/// A green capsule with a dot and a word, so the state never rests on color alone.
+private struct StatusBadgeStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: Space.xs) {
+            configuration.icon.font(.system(size: 6))
+            configuration.title.font(.caption.weight(.semibold))
+        }
+        .foregroundStyle(.green)
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, 2)
+        .background(.green.opacity(0.15), in: .capsule)
+    }
+}
+
+/// A tool in the Menu bar panel list: icon, name, summary, move buttons, switch.
+private struct PanelToolRow: View {
+    let tool: Tool
+    @Bindable var prefs: ToolPrefs
+
+    var body: some View {
+        let index = prefs.panelOrder.firstIndex(of: tool) ?? 0
+        LabeledContent {
+            HStack(spacing: Space.xs) {
+                Button("Move Up", systemImage: "chevron.up") { prefs.move(tool, by: -1) }
+                    .disabled(index == 0)
+                    .help("Move \(tool.title) up")
+                Button("Move Down", systemImage: "chevron.down") { prefs.move(tool, by: 1) }
+                    .disabled(index == prefs.panelOrder.count - 1)
+                    .help("Move \(tool.title) down")
+                Toggle("Show \(tool.title) in the panel", isOn: prefs.binding(\.inPanel, tool))
+                    .labelsHidden()
+                    .toggleStyle(.switch)
+                    .controlSize(.mini)
+                    .disabled(!prefs.enabled.contains(tool))
+            }
+            .labelStyle(.iconOnly)
+            .buttonStyle(.borderless)
+        } label: {
+            HStack(spacing: Space.sm) {
+                IconTile(symbol: tool.symbol, tint: tool.tint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tool.title)
+                    Text(prefs.enabled.contains(tool) ? tool.summary : "Off. Turn it on in its own page.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+}
+
+/// A tool's own page: on or off, its own menu bar icon, its shortcut, and its options.
+struct ToolSettings: View {
+    let tool: Tool
+    @Environment(AppModel.self) private var model
+    @Bindable private var prefs = ToolPrefs.shared
+    @State private var confirmClear = false
+
+    var body: some View {
+        Section {
+            Toggle(isOn: prefs.binding(\.enabled, tool)) {
+                Text("Turn on \(tool.title)")
+                Text("When off, its shortcut and menu bar icon go away and it uses no power.")
+            }
+            Toggle(isOn: prefs.binding(\.ownIcon, tool)) {
+                Text("Show \(tool.title) in the menu bar")
+                Text("Gives \(tool.title) its own icon that opens just this tool.")
+            }
+            .disabled(!prefs.enabled.contains(tool))
+            LabeledContent("Shortcut", value: tool.shortcutLabel)
+        } footer: {
+            if Hotkeys.shared.failed.contains(tool.title) {
+                Label("Unable to use \(tool.shortcutLabel). Another app uses it.", systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.orange)
+            }
+        }
+        .toggleStyle(.switch)
+        .controlSize(.mini)
+
+        switch tool {
+        case .launcher:
+            Section {
+                LabeledContent("Pinned apps") {
+                    Text("Pin with ⌘P, the pin button on a row, or Add… in the Launcher.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        case .clipboard:
+            Section {
+                LabeledContent("History", value: "Last \(ClipRules.historyLimit) clips")
+                LabeledContent("Paste") {
+                    Text("Return pastes, ⌥Return pastes as plain text.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("Clear History") {
+                    Button("Clear History…", role: .destructive) { confirmClear = true }
+                        .controlSize(.small)
+                }
+            } footer: {
+                Text("Pinned clips are always kept. Copies from password managers are never saved.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .confirmationDialog("Clear \(model.unpinnedClipCount()) Clips?", isPresented: $confirmClear) {
+                Button("Clear History", role: .destructive) { model.clearHistory() }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Pinned clips stay.")
+            }
+        }
     }
 }

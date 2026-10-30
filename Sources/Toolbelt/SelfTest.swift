@@ -82,6 +82,26 @@ enum SelfTest {
             model.togglePin(appPath: notes)
             check("pinning again adds it at the end", model.pinnedApps().map(\.path) == [finder, notes])
 
+            // S-032, S-034 tool switches and panel order
+            let prefs = ToolPrefs.shared
+            check("every tool starts on and in the panel", prefs.panelTools == Tool.allCases)
+            prefs.move(.clipboard, by: -1)
+            check("Move Up reorders the panel", prefs.panelTools.first == .clipboard)
+            prefs.enabled.remove(.clipboard)
+            check("a tool that is off leaves the panel", !prefs.panelTools.contains(.clipboard))
+            prefs.enabled.insert(.clipboard)
+            prefs.ownIcon.insert(.launcher)
+            StatusItems.shared?.apply(prefs)
+            check("Show in the menu bar adds the tool's own icon", StatusItems.shared?.tools[.launcher] != nil)
+            prefs.ownIcon.remove(.launcher)
+            StatusItems.shared?.apply(prefs)
+            check("turning it off removes the icon", StatusItems.shared?.tools[.launcher] == nil)
+            prefs.move(.clipboard, by: 1)
+
+            // S-015 clear history
+            model.clearHistory()
+            check("Clear History keeps only pinned clips", clips().allSatisfy(\.isPinned) && !clips().isEmpty)
+
             // S-002 secrets
             check("password manager copies are skipped",
                   ClipRules.shouldSkip(types: ["org.nspasteboard.ConcealedType"], sourceApp: nil))
