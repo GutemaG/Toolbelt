@@ -99,6 +99,30 @@ enum ToolActions {
                 model.soundTick &+= 1
             })
             return ("Play sound through", actions)
+        case .toggles:
+            _ = model.soundTick
+            let refresh = { model.soundTick &+= 1 }
+            let dark = QuickToggles.isDarkMode, icons = QuickToggles.showsDesktopIcons, hidden = QuickToggles.showsHiddenFiles
+            return ("System", [
+                ToolAction(id: "t.dark", title: "Dark Mode", symbol: dark ? "moon.fill" : "moon",
+                           help: "Switch the Mac between light and dark", isOn: dark, closes: false) {
+                    QuickToggles.toggleDarkMode(); refresh()
+                },
+                ToolAction(id: "t.icons", title: "Desktop Icons", symbol: icons ? "menubar.dock.rectangle" : "rectangle.dashed",
+                           help: icons ? "Hide the icons on the desktop (restarts Finder)" : "Show the icons on the desktop (restarts Finder)",
+                           isOn: icons, closes: false) {
+                    QuickToggles.setDesktopIcons(!icons); refresh()
+                },
+                ToolAction(id: "t.hidden", title: "Hidden Files", symbol: hidden ? "eye.fill" : "eye.slash",
+                           help: hidden ? "Hide hidden files in Finder (restarts Finder)" : "Show hidden files in Finder (restarts Finder)",
+                           isOn: hidden, closes: false) {
+                    QuickToggles.setHiddenFiles(!hidden); refresh()
+                },
+                ToolAction(id: "t.lock", title: "Lock Screen", symbol: "lock.fill", help: "Lock the Mac (⌃⌘Q)") { QuickToggles.lockScreen() },
+                ToolAction(id: "t.sleep", title: "Sleep Display", symbol: "display", help: "Turn the display off now") { QuickToggles.sleepDisplay() },
+                ToolAction(id: "t.saver", title: "Screen Saver", symbol: "sparkles.tv", help: "Start the screen saver") { QuickToggles.startScreenSaver() },
+                ToolAction(id: "t.trash", title: "Empty Trash", symbol: "trash", help: "Empty the Trash, after asking") { QuickToggles.emptyTrash() },
+            ])
         case .keepAwake:
             let on = model.awakeUntil != nil
             let lengths: [(String, String, TimeInterval?)] = [
@@ -131,6 +155,7 @@ enum ToolActions {
         case .recording: return model.isRecording ? "\(ShortcutID.record.label) Stop" : "\(ShortcutID.record.label) Start or Stop   ↩ Open"
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
+        case .toggles: return "↩ Flip the switch   Highlighted ones are on"
         case .sound: return "↩ Switch output   The highlighted one is playing now"
         case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"

@@ -176,6 +176,12 @@ enum SelfTest {
             check("sound output devices are listed", !outputs.isEmpty, "\(outputs.map(\.name))")
             check("the current output is one of them", outputs.contains { $0.id == AudioOutput.current })
 
+            // S-072 toggles: the scripts compile; nothing on this Mac is switched
+            for script in [QuickToggles.darkModeScript, QuickToggles.emptyTrashScript] {
+                var error: NSDictionary?
+                check("a toggle's script compiles", NSAppleScript(source: script)?.compileAndReturnError(&error) == true, "\(error ?? [:])")
+            }
+
             // S-060 colors
             ColorPicker.shared.remember(RGB(r: 255, g: 128, b: 0))
             ColorPicker.shared.remember(RGB(r: 0, g: 0, b: 0))

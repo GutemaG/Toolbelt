@@ -58,6 +58,7 @@ struct SettingsView: View {
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
             case .sound: ToolSettings(tool: .sound)
+            case .toggles: ToolSettings(tool: .toggles)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -87,7 +88,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, sound, keepAwake, appearance
+    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -99,7 +100,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
-        case .timer, .sound, .keepAwake: .tools
+        case .timer, .sound, .toggles, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -392,6 +393,13 @@ struct ToolSettings: View {
             WindowOptions()
         case .keepAwake:
             KeepAwakeOptions()
+        case .toggles:
+            Section {
+            } footer: {
+                Text("Dark Mode asks once to control System Events, and Empty Trash to control Finder. Desktop Icons and Hidden Files restart Finder. Lock Screen needs Accessibility.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .sound:
             Section {
             } footer: {
