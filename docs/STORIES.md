@@ -28,7 +28,7 @@ UX:
 - States: first open shows Launcher; each tab owns its own empty state (S-003, S-008)
 - Words: segment labels "Launcher" and "Clipboard"; menu bar icon tooltip "Toolbelt"; segment tooltips "Find and open apps (⌘1)", "Search clipboard history (⌘2)"
 - Access: menu bar icon VoiceOver label "Toolbelt"; segmented control reads "Tool, Launcher, 1 of 2"; focus goes to the search field on open; Reduce Motion skips the popover slide
-Status: todo
+Status: done
 
 ### S-002 Record copied text and links
 As the user, I copy text or a link in any app and it appears at the top of
@@ -45,7 +45,7 @@ UX:
 - States: a duplicate copy moves the existing clip to the top with its new time; nothing to show for errors, a failed read is skipped and logged
 - Words: none new
 - Access: nothing on screen to read
-Status: todo
+Status: done
 
 ### S-003 Browse clipboard history
 As the user, I open the Clipboard tab and see my recent copies, newest first.
@@ -61,7 +61,7 @@ UX:
 - States: empty "No Clips Yet" with "Copy something and it shows up here."; too much: preview is one line with a tail ellipsis and the first 500 characters in the tooltip; 500 rows scroll smoothly (lazy list)
 - Words: section header "Recent"; relative times "Just now", "2 min ago", "Yesterday", then a short date
 - Access: row reads "<preview>, from <source app>, <time>"; link rows add "link"; icon has no separate VoiceOver stop
-Status: todo
+Status: done
 
 ### S-004 Copy a past item back to the clipboard
 As the user, I select a row and press Return (or click it) to put it back on
@@ -78,7 +78,7 @@ UX:
 - States: done: popover closes at once, which is the feedback; reopening shows the clip at the top
 - Words: footer hint "↩ Copy"; row hover tooltip "Copy this clip (↩)"
 - Access: Return on the focused row copies; VoiceOver custom action "Copy"
-Status: todo
+Status: done
 
 ### S-005 Search clipboard history
 As the user, I type in the search field above the list to filter history.
@@ -95,7 +95,7 @@ UX:
 - States: no matches "No Results" with "No clips match “<query>”."; clearing the field brings back the full list with the old selection
 - Words: placeholder "Search Clips"; clear button tooltip "Clear the search"
 - Access: field VoiceOver label "Search clips"; result count announced after typing pauses ("12 clips"); highlight uses bold weight as well as accent color
-Status: todo
+Status: done
 
 ### S-006 Find an app by typing
 As the user, I type a few letters in the Launcher tab and see matching apps.
@@ -112,7 +112,7 @@ UX:
 - States: indexing on first run shows Frequent from cache and never blocks typing; no matches "No Results" with "No apps match “<query>”."; long app names truncate with the full name in the tooltip
 - Words: placeholder "Search Apps"; matched letters in bold
 - Access: result reads "<app name>, application"; matched letters use bold, not color alone
-Status: todo
+Status: done
 
 ### S-007 Launch an app with Return
 As the user, I press Return on the selected result and the app opens or comes
@@ -128,7 +128,7 @@ UX:
 - States: an app that was moved or deleted shows inline under the row "Unable to open <app>. It may have been moved or deleted." and is dropped from the index on the next refresh
 - Words: footer hint "↩ Open"; row tooltip "Open <app> (↩)"; running apps show a small dot plus the word "Running" for VoiceOver
 - Access: Return on the focused row opens; VoiceOver custom action "Open"
-Status: todo
+Status: done
 
 ### S-008 Rank launcher results by how often I use them
 As the user, the apps I open most appear first, and with an empty query I
@@ -144,7 +144,7 @@ UX:
 - States: before any app has been opened, Frequent is replaced by "No Frequent Apps Yet" with "Apps you open from Toolbelt show up here." and an A–Z list below
 - Words: section header "Frequent"; when searching, no header
 - Access: section header is a VoiceOver heading
-Status: todo
+Status: done
 
 ## M2 Speed
 
@@ -157,7 +157,7 @@ Acceptance:
 - [manual] The shortcut works from any app, including full screen apps.
 - [snap] The panel is a Liquid Glass floating panel with the same results as the Launcher tab.
 - [manual] Pressing the shortcut again, Escape, or clicking elsewhere closes it and returns focus to the previous app.
-Status: todo
+Status: done
 
 ### S-010 Open clipboard history with Shift-Command-V
 As the user, I press Shift-Command-V and a floating clipboard panel appears.
@@ -166,7 +166,7 @@ Depends: S-005
 Acceptance:
 - [manual] The shortcut works from any app; the search field has focus.
 - [snap] The panel shows the list on the left and a preview of the selected item on the right.
-Status: todo
+Status: doing (needs the preview pane beside the list)
 
 ### S-011 Navigate lists with the keyboard
 As the user, I move through results with the arrow keys and pick one with
@@ -177,7 +177,7 @@ Acceptance:
 - [self] Up and Down move the selection and keep it scrolled into view; typing keeps focus in search.
 - [snap] Rows 1–9 show their Command-number hint.
 - [self] Command-number picks that row.
-Status: todo
+Status: doing (arrows, Return, Tab and ⌘1/⌘2 for tools done; ⌘1–9 rows conflict with ⌘1/⌘2 tool switching)
 
 ### S-012 Paste straight into the front app
 As the user, I press Return in the clipboard panel and the item is pasted
@@ -188,7 +188,7 @@ Acceptance:
 - [manual] With Accessibility allowed, the panel closes, the previous app is focused, and the item is pasted.
 - [manual] Without Accessibility, the item is copied and a sheet explains why pasting needs the permission, with a button that opens System Settings.
 - [unit] Option-Return pastes as plain text (no formatting).
-Status: todo
+Status: done
 
 ## M3 Clips
 
@@ -200,7 +200,7 @@ Depends: S-003
 Acceptance:
 - [snap] Pinned items show in a "Pinned" section above "Recent".
 - [unit] Pruning never removes pinned items.
-Status: todo
+Status: done
 
 ### S-014 Delete a clip
 As the user, I press Delete on a row to remove it from history.
@@ -208,7 +208,7 @@ Depends: S-003
 Acceptance:
 - [unit] The item is removed from the store.
 - [self] Command-Z right after brings it back.
-Status: todo
+Status: doing (delete done, Undo not yet)
 
 ### S-015 Clear history
 As the user, I choose Clear History and every unpinned item is removed after I
@@ -228,7 +228,7 @@ Acceptance:
 - [unit] PNG and TIFF pasteboard data create a kind image item; images over 10 MB are skipped.
 - [snap] Rows show a thumbnail; the panel preview shows the full image and its pixel size.
 - [manual] Choosing it puts the image back on the clipboard and pastes it into Preview.
-Status: todo
+Status: done
 
 ### S-017 Skip passwords and secret copies
 As the user, things copied from password managers are never saved.
@@ -236,14 +236,14 @@ Depends: S-002
 Acceptance:
 - [unit] Items marked org.nspasteboard.ConcealedType or TransientType are ignored.
 - [unit] Items from apps in the excluded list are ignored.
-Status: todo
+Status: done
 
 ### S-018 Keep history to a size limit
 As the user, history keeps the last 500 unpinned items by default.
 Depends: S-013
 Acceptance:
 - [unit] Adding item 501 removes the oldest unpinned item.
-Status: todo
+Status: done
 
 ## M4 System
 
@@ -270,7 +270,7 @@ As the user, I turn on "Open at login" in Settings.
 Screens: settings-general
 Acceptance:
 - [manual] With it on, Toolbelt runs after a restart; the toggle reflects System Settings > Login Items.
-Status: todo
+Status: done
 
 ### S-022 Pause clipboard recording
 As the user, I choose Pause Recording from the menu bar icon's menu so the
@@ -306,7 +306,7 @@ Screens: settings-general
 Depends: S-001
 Acceptance:
 - [manual] Right-click shows the menu; Command-, in the popover opens Settings.
-Status: todo
+Status: done
 
 ### S-026 App icon
 As the user, I see a Toolbelt icon in Settings, About, and Login Items.
