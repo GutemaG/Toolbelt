@@ -253,7 +253,8 @@ struct ToolbeltView: View {
                     .frame(width: 48, height: 48)
                 Text(action.title)
                     .font(.caption)
-                    .lineLimit(1)
+                    .lineLimit(2, reservesSpace: true)
+                    .multilineTextAlignment(.center)
             default:
                 Image(systemName: "plus")
                     .font(.title2)

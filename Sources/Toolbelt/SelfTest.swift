@@ -171,6 +171,11 @@ enum SelfTest {
             try? await Task.sleep(for: .seconds(2.5))
             check("a timer ends by itself", !TimerTool.shared.isRunning)
 
+            // S-071 sound output, read only: never switches this Mac's sound
+            let outputs = AudioOutput.devices()
+            check("sound output devices are listed", !outputs.isEmpty, "\(outputs.map(\.name))")
+            check("the current output is one of them", outputs.contains { $0.id == AudioOutput.current })
+
             // S-060 colors
             ColorPicker.shared.remember(RGB(r: 255, g: 128, b: 0))
             ColorPicker.shared.remember(RGB(r: 0, g: 0, b: 0))

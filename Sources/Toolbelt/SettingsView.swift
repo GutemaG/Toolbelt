@@ -57,6 +57,7 @@ struct SettingsView: View {
             case .colors: ToolSettings(tool: .colors)
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
+            case .sound: ToolSettings(tool: .sound)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -86,7 +87,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, keepAwake, appearance
+    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, sound, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -98,7 +99,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
-        case .timer, .keepAwake: .tools
+        case .timer, .sound, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -391,6 +392,13 @@ struct ToolSettings: View {
             WindowOptions()
         case .keepAwake:
             KeepAwakeOptions()
+        case .sound:
+            Section {
+            } footer: {
+                Text("Switching here changes the output for the whole Mac, like Sound in Control Center. Give Sound its own menu bar icon for one-click switching.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .timer:
             Section {
             } footer: {

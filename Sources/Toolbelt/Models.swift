@@ -75,6 +75,8 @@ final class AppModel {
     var timerPausedLeft: TimeInterval?
     var timerLength: TimeInterval = 0
     var timerTick = 0
+    /// Bumped after switching sound output or mute, so the tiles redraw.
+    var soundTick = 0
     /// Colors picked, newest first, as "#RRGGBB".
     var recentColors: [String] = []
 

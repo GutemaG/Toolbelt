@@ -81,6 +81,24 @@ enum ToolActions {
                     timer.start(length)
                 }
             })
+        case .sound:
+            _ = model.soundTick
+            let current = AudioOutput.current
+            var actions = AudioOutput.devices().map { device in
+                ToolAction(id: "sound.\(device.id)", title: device.name, symbol: device.symbol,
+                           help: "Play sound through \(device.name)", isOn: device.id == current, closes: false) {
+                    AudioOutput.select(device)
+                    model.soundTick &+= 1
+                }
+            }
+            let muted = AudioOutput.isMuted
+            actions.append(ToolAction(id: "sound.mute", title: muted ? "Unmute" : "Mute",
+                                      symbol: muted ? "speaker.slash.fill" : "speaker.slash",
+                                      help: muted ? "Turn the sound back on" : "Mute the sound", isOn: muted, closes: false) {
+                AudioOutput.setMuted(!muted)
+                model.soundTick &+= 1
+            })
+            return ("Play sound through", actions)
         case .keepAwake:
             let on = model.awakeUntil != nil
             let lengths: [(String, String, TimeInterval?)] = [
@@ -113,6 +131,7 @@ enum ToolActions {
         case .recording: return model.isRecording ? "\(ShortcutID.record.label) Stop" : "\(ShortcutID.record.label) Start or Stop   ↩ Open"
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
+        case .sound: return "↩ Switch output   The highlighted one is playing now"
         case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"
         }
