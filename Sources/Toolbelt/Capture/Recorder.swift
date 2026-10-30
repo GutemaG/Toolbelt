@@ -166,7 +166,7 @@ final class Recorder: NSObject, SCRecordingOutputDelegate, SCStreamDelegate {
         item.button?.imagePosition = .imageLeading
         item.button?.contentTintColor = .systemRed
         item.button?.title = " 0:00"
-        item.button?.toolTip = "Stop recording (⌃⇧5)"
+        item.button?.toolTip = "Stop recording (\(ShortcutID.record.label))"
         item.button?.target = self
         item.button?.action = #selector(stopClicked)
         indicator = item

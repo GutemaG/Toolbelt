@@ -355,16 +355,23 @@ struct ToolSettings: View {
                 Text("Gives \(tool.title) its own icon that opens just this tool.")
             }
             .disabled(!prefs.enabled.contains(tool))
-            LabeledContent("Shortcut", value: tool.shortcutLabel)
-        } footer: {
-            if Hotkeys.shared.failed.contains(tool.title) {
-                Label("Unable to use \(tool.shortcutLabel). Another app uses it.", systemImage: "exclamationmark.triangle.fill")
-                    .font(.caption)
-                    .foregroundStyle(.orange)
-            }
         }
         .toggleStyle(.switch)
         .controlSize(.mini)
+
+        let shortcuts = ShortcutID.all.filter { $0.tool == tool }
+        if !shortcuts.isEmpty {
+            Section {
+                ForEach(shortcuts) { ShortcutRecorder(id: $0) }
+            } header: {
+                Text("Shortcuts")
+            } footer: {
+                Text("Click a shortcut and press new keys. Esc cancels, Delete removes it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .disabled(!prefs.enabled.contains(tool))
+        }
 
         switch tool {
         case .launcher:
@@ -490,7 +497,7 @@ private struct RecordingOptions: View {
         } header: {
             Text("Options")
         } footer: {
-            Text("Stop with the red timer in the menu bar or ⌃⇧5. The red frame around the area is not in the movie.")
+            Text("Stop with the red timer in the menu bar or \(ShortcutID.record.label). The red frame around the area is not in the movie.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -559,19 +566,10 @@ private struct ColorOptions: View {
     }
 }
 
-/// Settings > Windows: the shortcut for every position.
+/// Settings > Windows: what snapping needs. The shortcuts are above.
 private struct WindowOptions: View {
     var body: some View {
         Section {
-            ForEach(WindowPosition.allCases, id: \.self) { position in
-                LabeledContent {
-                    Text(position.shortcut.label).monospaced().foregroundStyle(.secondary)
-                } label: {
-                    Label(position.title, systemImage: position.symbol)
-                }
-            }
-        } header: {
-            Text("Shortcuts")
         } footer: {
             Text("Moves the front window on the screen it is on. Needs Accessibility.")
                 .font(.caption)

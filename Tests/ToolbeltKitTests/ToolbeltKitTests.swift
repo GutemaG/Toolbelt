@@ -136,3 +136,14 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(LinkCleaner.clean("https://example.com/") == nil)
     #expect(LinkCleaner.clean("not a link?utm_source=x") == nil)
 }
+
+@Test func keyCombos() {
+    let shot = KeyCombo(keyCode: 21, modifiers: KeyCombo.control | KeyCombo.shift)
+    #expect(shot.label == "⌃⇧4")
+    #expect(KeyCombo(keyCode: 49, modifiers: KeyCombo.option).label == "⌥Space")
+    #expect(KeyCombo(keyCode: 9, modifiers: KeyCombo.command | KeyCombo.shift).label == "⇧⌘V")
+    #expect(KeyCombo(encoded: shot.encoded) == shot)
+    #expect(KeyCombo(encoded: "nope") == nil)
+    #expect(!KeyCombo(keyCode: 0, modifiers: KeyCombo.shift).isUsable)
+    #expect(KeyCombo(keyCode: 122, modifiers: 0).isUsable)
+}

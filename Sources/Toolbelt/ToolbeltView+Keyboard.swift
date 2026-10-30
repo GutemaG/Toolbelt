@@ -14,8 +14,8 @@ extension ToolbeltView {
                 if shots {
                     ForEach(CaptureMode.allCases) { mode in
                         quickButton(mode.title, symbol: mode.symbol,
-                                    help: mode == .screen ? "Screenshot of the whole screen (⌃⇧3)"
-                                        : "Screenshot of \(mode == .area ? "an area" : "a window") (⌃⇧4)") {
+                                    help: mode == .screen ? "Screenshot of the whole screen (\(ShortcutID.shotScreen.label))"
+                                        : "Screenshot of \(mode == .area ? "an area" : "a window") (\(ShortcutID.shotArea.label))") {
                             close()
                             CaptureController.shared.screenshot(mode)
                         }
@@ -26,7 +26,7 @@ extension ToolbeltView {
                 }
                 if record {
                     quickButton(isRecording ? "Stop" : "Record", symbol: isRecording ? "stop.circle.fill" : "record.circle",
-                                help: isRecording ? "Stop recording (⌃⇧5)" : "Record an area, a window or the screen (⌃⇧5)") {
+                                help: isRecording ? "Stop recording (\(ShortcutID.record.label))" : "Record an area, a window or the screen (\(ShortcutID.record.label))") {
                         close()
                         isRecording ? Recorder.shared?.stop() : Recorder.shared?.start(.area)
                     }

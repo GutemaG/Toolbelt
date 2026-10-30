@@ -57,55 +57,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let prefs = ToolPrefs.shared
         statusItems.apply(prefs)
 
+        // Every shortcut of every tool that is on, as chosen in Settings.
         Hotkeys.shared.unregisterAll()
-        if prefs.enabled.contains(.launcher) {
-            Hotkeys.shared.register(Tool.launcher.title, keyCode: kVK_Space, modifiers: optionKey) {
-                PanelController.shared.toggle(.launcher)
-            }
+        for id in ShortcutID.all where prefs.enabled.contains(id.tool) {
+            guard let combo = ShortcutStore.shared.combo(for: id) else { continue }
+            Hotkeys.shared.register(id.key, keyCode: combo.keyCode, modifiers: combo.modifiers) { id.run() }
         }
-        if prefs.enabled.contains(.clipboard) {
-            Hotkeys.shared.register(Tool.clipboard.title, keyCode: kVK_ANSI_V, modifiers: cmdKey | shiftKey) {
-                PanelController.shared.toggle(.clipboard)
-            }
-            model.clipboard.start()
-        } else {
-            model.clipboard.stop()
-        }
-        if prefs.enabled.contains(.screenshots) {
-            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_4, modifiers: controlKey | shiftKey) {
-                CaptureController.shared.screenshot(.area)
-            }
-            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_3, modifiers: controlKey | shiftKey) {
-                CaptureController.shared.screenshot(.screen)
-            }
-        }
-        if prefs.enabled.contains(.screenshots) {
-            Hotkeys.shared.register(Tool.screenshots.title, keyCode: kVK_ANSI_2, modifiers: controlKey | shiftKey) {
-                TextGrabber.shared.grab()
-            }
-        }
-        if prefs.enabled.contains(.colors) {
-            Hotkeys.shared.register(Tool.colors.title, keyCode: kVK_ANSI_C, modifiers: controlKey | shiftKey) {
-                ColorPicker.shared.pick()
-            }
-        }
-        if prefs.enabled.contains(.windows) {
-            for position in WindowPosition.allCases {
-                Hotkeys.shared.register(Tool.windows.title, keyCode: position.shortcut.keyCode, modifiers: controlKey | optionKey) {
-                    WindowSnapper.shared.snap(position)
-                }
-            }
-        }
-        if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn {
-            KeepAwake.shared.stop()
-        }
-        if prefs.enabled.contains(.recording) {
-            Hotkeys.shared.register(Tool.recording.title, keyCode: kVK_ANSI_5, modifiers: controlKey | shiftKey) {
-                Recorder.shared.toggle()
-            }
-        } else if Recorder.shared.isRecording {
-            Recorder.shared.stop()
-        }
+        if prefs.enabled.contains(.clipboard) { model.clipboard.start() } else { model.clipboard.stop() }
+        if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn { KeepAwake.shared.stop() }
+        if !prefs.enabled.contains(.recording), Recorder.shared.isRecording { Recorder.shared.stop() }
         if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
 
         let policy: NSApplication.ActivationPolicy = prefs.showInDock ? .regular : .accessory

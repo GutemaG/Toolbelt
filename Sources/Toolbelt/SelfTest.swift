@@ -140,6 +140,17 @@ enum SelfTest {
                 print("SKIP capture checks: this run may not record the screen")
             }
 
+            // S-019 shortcuts
+            let store = ShortcutStore.shared
+            check("shortcuts start at their defaults", store.combo(for: .shotArea)?.label == "⌃⇧4")
+            store.set(KeyCombo(keyCode: 49, modifiers: KeyCombo.option), for: .clipboard)
+            check("a changed shortcut is used", store.combo(for: .clipboard)?.label == "⌥Space")
+            check("two tools on one shortcut are flagged", store.conflict(for: .clipboard) == .launcher)
+            store.set(nil, for: .clipboard)
+            check("Delete clears a shortcut", store.combo(for: .clipboard) == nil)
+            store.reset(.clipboard)
+            check("Reset brings the default back", store.combo(for: .clipboard)?.label == "⇧⌘V")
+
             // S-061 Keep Awake
             KeepAwake.shared.start(for: 60)
             check("Keep Awake holds a power assertion", KeepAwake.shared.isOn && model.awakeUntil != nil)

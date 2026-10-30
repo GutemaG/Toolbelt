@@ -70,17 +70,10 @@ enum Tool: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The global shortcut as shown on screen.
-    var shortcutLabel: String {
-        switch self {
-        case .launcher: "⌥Space"
-        case .clipboard: "⇧⌘V"
-        case .screenshots: "⌃⇧4 area or window, ⌃⇧3 screen"
-        case .recording: "⌃⇧5 start or stop"
-        case .colors: "⌃⇧C"
-        case .windows: "⌃⌥ + arrows and letters"
-        case .keepAwake: "None, use the panel or its icon"
-        }
+    /// The tool's shortcuts as shown on screen.
+    @MainActor var shortcutLabel: String {
+        let labels = ShortcutID.all.filter { $0.tool == self }.compactMap { ShortcutStore.shared.combo(for: $0)?.label }
+        return labels.isEmpty ? "None" : labels.prefix(3).joined(separator: ", ")
     }
 }
 
