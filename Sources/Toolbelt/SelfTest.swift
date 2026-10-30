@@ -100,6 +100,9 @@ enum SelfTest {
             check("turning it off removes the icon", StatusItems.shared?.tools[.launcher] == nil)
             prefs.move(.clipboard, by: 1)
 
+            check("tools from a newer version start on",
+                  ToolPrefs.newTools(savedOrder: [.launcher, .clipboard]) == [.screenshots, .recording])
+
             // S-015 clear history
             model.clearHistory()
             check("Clear History keeps only pinned clips", clips().allSatisfy(\.isPinned) && !clips().isEmpty)

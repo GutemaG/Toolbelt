@@ -36,6 +36,7 @@ struct ToolbeltView: View {
         VStack(spacing: 0) {
             header
             Divider()
+            quickActions
             results
             Divider()
             footer
@@ -93,6 +94,51 @@ struct ToolbeltView: View {
         }
         .padding(.horizontal, Space.lg)
         .padding(.vertical, Space.md)
+    }
+
+    /// A thin row of capture buttons under the search field in the Launcher,
+    /// so screenshots and recording are one click from the menu bar.
+    @ViewBuilder
+    private var quickActions: some View {
+        let prefs = ToolPrefs.shared
+        let shots = prefs.enabled.contains(.screenshots), record = prefs.enabled.contains(.recording)
+        if tool == .launcher, !model.pickingApps, shots || record {
+            HStack(spacing: Space.sm) {
+                if shots {
+                    ForEach(CaptureMode.allCases) { mode in
+                        quickButton(mode.title, symbol: mode.symbol,
+                                    help: mode == .screen ? "Screenshot of the whole screen (⌃⇧3)"
+                                        : "Screenshot of \(mode == .area ? "an area" : "a window") (⌃⇧4)") {
+                            close()
+                            CaptureController.shared.screenshot(mode)
+                        }
+                    }
+                }
+                if shots && record {
+                    Divider().frame(height: Space.lg)
+                }
+                if record {
+                    quickButton(isRecording ? "Stop" : "Record", symbol: isRecording ? "stop.circle.fill" : "record.circle",
+                                help: isRecording ? "Stop recording (⌃⇧5)" : "Record an area, a window or the screen (⌃⇧5)") {
+                        close()
+                        isRecording ? Recorder.shared?.stop() : Recorder.shared?.start(.area)
+                    }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, Space.lg)
+            .padding(.vertical, Space.sm)
+            Divider()
+        }
+    }
+
+    private func quickButton(_ title: String, symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+        }
+        .buttonStyle(.bordered)
+        .controlSize(.small)
+        .help(help)
     }
 
     private var placeholder: String {

@@ -89,14 +89,21 @@ final class ToolPrefs {
             guard let raw = UserDefaults.standard.stringArray(forKey: key), !Store.isOverridden else { return fallback }
             return raw.compactMap(Tool.init(rawValue:))
         }
-        enabled = Set(tools("tools.enabled", Tool.allCases))
-        ownIcon = Set(tools("tools.ownIcon", []))
-        inPanel = Set(tools("tools.inPanel", Tool.allCases))
-        // Tools added in a later version join the end of the saved order.
+        // A tool missing from the saved order came with a later version: it
+        // starts on and in the panel, at the end, instead of staying hidden.
         let order = tools("tools.panelOrder", Tool.allCases)
-        panelOrder = order + Tool.allCases.filter { !order.contains($0) }
+        let added = Self.newTools(savedOrder: order)
+        enabled = Set(tools("tools.enabled", Tool.allCases) + added)
+        ownIcon = Set(tools("tools.ownIcon", []))
+        inPanel = Set(tools("tools.inPanel", Tool.allCases) + added)
+        panelOrder = order + added
         showMainIcon = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.showMainIcon") as? Bool ?? true)
         showInDock = Store.isOverridden ? false : UserDefaults.standard.bool(forKey: "tools.showInDock")
+    }
+
+    /// Tools this version has that a saved order from an older version lacks.
+    static func newTools(savedOrder: [Tool]) -> [Tool] {
+        Tool.allCases.filter { !savedOrder.contains($0) }
     }
 
     /// The tools the Toolbelt panel shows, in order.
