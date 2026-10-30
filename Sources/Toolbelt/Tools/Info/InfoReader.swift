@@ -71,8 +71,7 @@ nonisolated enum InfoReader {
         var healthRows = [InfoRow(label: "Condition", value: InfoRules.batteryCondition(health?["sppower_battery_health"] as? String, maximumCapacity: maximum))]
         if let maximum { healthRows.append(InfoRow(label: "Maximum capacity", value: "\(maximum)%", fraction: Double(maximum) / 100)) }
         if let cycles = int("CycleCount") {
-            let rated = int("DesignCycleCount9C") ?? 1000
-            healthRows.append(InfoRow(label: "Cycle count", value: "\(cycles) of \(rated)", help: "Rated for \(rated) full cycles"))
+            healthRows.append(InfoRow(label: "Cycle count", value: "\(cycles)"))
         }
         if fullCharge > 0 { healthRows.append(InfoRow(label: "Full charge capacity", value: "\(fullCharge.formatted()) mAh")) }
         if design > 0 { healthRows.append(InfoRow(label: "Design capacity", value: "\(design.formatted()) mAh")) }
