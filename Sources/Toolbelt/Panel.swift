@@ -88,6 +88,17 @@ final class PanelController {
         }
     }
 
+    /// Same as paste(_:), for text that is not a clip (a snippet).
+    func paste(text: String) {
+        model.clipboard.write(text: text)
+        hide()
+        guard Self.canPaste(prompt: true) else { return }
+        Task {
+            try? await Task.sleep(for: .milliseconds(80))
+            Self.pressCommandV()
+        }
+    }
+
     static func canPaste(prompt: Bool) -> Bool {
         if AXIsProcessTrusted() { return true }
         guard prompt else { return false }

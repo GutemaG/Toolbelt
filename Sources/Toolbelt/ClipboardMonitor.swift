@@ -64,6 +64,13 @@ final class ClipboardMonitor {
         }
     }
 
+    /// Writes text (a snippet) without saving it as a new clip.
+    func write(text: String) {
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+        lastChange = pasteboard.changeCount
+    }
+
     /// Writes a clip to the pasteboard without saving it again as a new copy.
     func write(_ clip: ClipItem, plainText: Bool = false) {
         pasteboard.clearContents()

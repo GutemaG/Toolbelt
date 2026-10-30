@@ -19,6 +19,7 @@ struct ToolbeltView: View {
     @Query(sort: \ClipItem.copiedAt, order: .reverse) var clips: [ClipItem]
     @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) var pinnedLaunches: [AppLaunch]
     @Query(sort: \Capture.createdAt, order: .reverse) var captures: [Capture]
+    @Query(sort: \Snippet.title) var snippets: [Snippet]
     @State var query = ""
     @State var selected = 0
     /// Bumped by the arrow keys. Only keyboard moves scroll; hovering never does.
@@ -235,6 +236,23 @@ struct ToolbeltView: View {
                 Text(rgb.rgb + "   " + rgb.hsl)
                     .font(.caption.monospaced())
                     .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+            case .snippet(let snippet):
+                Image(systemName: "text.quote")
+                    .frame(width: 20)
+                Text(snippet.displayTitle)
+                    .lineLimit(1)
+                if !snippet.keyword.isEmpty {
+                    Text(snippet.keyword)
+                        .font(.caption.monospaced())
+                        .padding(.horizontal, Space.xs + 2)
+                        .padding(.vertical, 1)
+                        .background(.quaternary, in: .capsule)
+                }
+                Text(ClipRules.preview(snippet.text, limit: 80))
+                    .lineLimit(1)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+                    .help(String(snippet.text.prefix(500)))
+                Spacer(minLength: 0)
             case .add, .action:
                 EmptyView()
             }
@@ -329,6 +347,12 @@ struct ToolbeltView: View {
             Button(surface == .panel ? "Paste as Plain Text" : "Copy as Plain Text") { activate(entry, plainText: true) }
             Button(clip.isPinned ? "Unpin" : "Pin") { model.togglePin(clip) }
                 .keyboardShortcut("p")
+            if clip.kind != .image {
+                Button("Save as Snippet…") {
+                    close()
+                    model.editSnippet(model.addSnippet(title: ClipRules.preview(clip.text, limit: 40), text: clip.text))
+                }
+            }
             Divider()
             Button("Delete", role: .destructive) { model.delete(clip) }
                 .keyboardShortcut(.delete)
@@ -336,6 +360,11 @@ struct ToolbeltView: View {
             Button("Add…") { activate(entry, plainText: false) }
         case .action:
             EmptyView()
+        case .snippet(let snippet):
+            Button(surface == .panel ? "Paste" : "Copy") { activate(entry, plainText: false) }
+            Button("Edit…") { close(); model.editSnippet(snippet) }
+            Divider()
+            Button("Delete", role: .destructive) { model.deleteSnippet(snippet) }
         case .color(let hex):
             let rgb = RGB(hex: hex) ?? RGB(r: 0, g: 0, b: 0)
             ForEach(ColorTextFormat.allCases, id: \.self) { format in
@@ -408,6 +437,7 @@ struct ToolbeltView: View {
         case capture(Capture)
         /// A recently picked color, "#RRGGBB".
         case color(String)
+        case snippet(Snippet)
 
         var id: String {
             switch self {
@@ -416,6 +446,7 @@ struct ToolbeltView: View {
             case .add: "add"
             case .action(let action): "m:" + action.id
             case .color(let hex): "k:" + hex
+            case .snippet(let snippet): "s:" + snippet.uuid.uuidString
             case .capture(let capture): "f:" + capture.uuid.uuidString
             }
         }
@@ -490,6 +521,9 @@ struct ToolbeltView: View {
                 let kind: CaptureKind = tool == .screenshots ? .screenshot : .recording
                 let recent = captures.filter { $0.kind == kind && $0.exists && (query.isEmpty || ClipRules.matches(query, text: $0.name)) }
                 if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.capture))) }
+            case .snippets:
+                let found = model.searchSnippets(snippets, query: query)
+                if !found.isEmpty { result.append(Section(title: query.isEmpty ? "All Snippets" : nil, entries: found.map(Entry.snippet))) }
             case .colors:
                 let recent = model.recentColors.filter { query.isEmpty || ClipRules.matches(query, text: $0) }
                 if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.color))) }
@@ -531,6 +565,15 @@ struct ToolbeltView: View {
         case .action(let action):
             if action.closes { close() }
             action.run()
+        case .snippet(let snippet):
+            snippet.lastUsed = .now
+            try? model.context.save()
+            if surface == .panel {
+                PanelController.shared.paste(text: snippet.text)
+            } else {
+                model.clipboard.write(text: snippet.text)
+                close()
+            }
         case .color(let hex):
             if let rgb = RGB(hex: hex) { ColorPicker.shared.copy(rgb, as: ColorPicker.format) }
             close()

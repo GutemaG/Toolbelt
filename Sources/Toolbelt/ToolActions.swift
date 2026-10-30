@@ -23,6 +23,12 @@ enum ToolActions {
         switch tool {
         case .launcher, .clipboard:
             return nil
+        case .snippets:
+            guard query.isEmpty else { return nil }
+            return ("Snippets", [ToolAction(id: "snippet.new", title: "New Snippet", symbol: "plus",
+                                            help: "Write a new snippet in Settings") {
+                model.editSnippet(model.addSnippet())
+            }])
         case .screenshots:
             let modes = CaptureMode.allCases.map { mode in
                 ToolAction(id: "shot." + mode.rawValue, title: mode.title, symbol: mode.symbol,
@@ -151,6 +157,7 @@ enum ToolActions {
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
+        case .snippets: return (surface == .panel ? "↩ Paste" : "↩ Copy") + "   Type a keyword like ;addr   Right-click to edit"
         case .screenshots: return "\(ShortcutID.shotArea.label) Area or Window   \(ShortcutID.shotScreen.label) Screen   \(ShortcutID.shotText.label) Text"
         case .recording: return model.isRecording ? "\(ShortcutID.record.label) Stop" : "\(ShortcutID.record.label) Start or Stop   ↩ Open"
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"

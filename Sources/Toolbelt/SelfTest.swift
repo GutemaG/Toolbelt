@@ -151,6 +151,15 @@ enum SelfTest {
             store.reset(.clipboard)
             check("Reset brings the default back", store.combo(for: .clipboard)?.label == "⇧⌘V")
 
+            // S-073 snippets
+            let address = model.addSnippet(title: "Home address", text: "1 Main St", keyword: ";addr")
+            model.addSnippet(title: "Reply", text: "Thanks, I'll check the address", keyword: "")
+            let saved = (try? context.fetch(FetchDescriptor<Snippet>())) ?? []
+            check("a keyword finds its snippet first", model.searchSnippets(saved, query: ";addr").first?.uuid == address.uuid)
+            check("search also looks in the text", model.searchSnippets(saved, query: "check the").count == 1)
+            model.deleteSnippet(address)
+            check("deleting a snippet removes it", ((try? context.fetch(FetchDescriptor<Snippet>())) ?? []).count == saved.count - 1)
+
             // S-061 Keep Awake
             KeepAwake.shared.start(for: 60)
             check("Keep Awake holds a power assertion", KeepAwake.shared.isOn && model.awakeUntil != nil)

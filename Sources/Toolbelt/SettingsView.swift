@@ -52,6 +52,7 @@ struct SettingsView: View {
             case .settings: GeneralSettings()
             case .launcher: ToolSettings(tool: .launcher)
             case .clipboard: ToolSettings(tool: .clipboard)
+            case .snippets: ToolSettings(tool: .snippets)
             case .screenshots: ToolSettings(tool: .screenshots)
             case .recording: ToolSettings(tool: .recording)
             case .colors: ToolSettings(tool: .colors)
@@ -88,7 +89,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -97,7 +98,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var group: SettingsGroup {
         switch self {
         case .settings: .top
-        case .launcher, .clipboard: .input
+        case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
         case .timer, .sound, .toggles, .keepAwake: .tools
@@ -385,6 +386,8 @@ struct ToolSettings: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        case .snippets:
+            SnippetSettings()
         case .screenshots:
             ScreenshotOptions()
         case .colors:

@@ -51,6 +51,13 @@ enum SeedData {
             launch.lastLaunched = .now
             context.insert(launch)
         }
+        for (title, keyword, text) in [
+            ("Home address", ";addr", "1 Infinite Loop\nCupertino, CA 95014"),
+            ("Thanks reply", ";ty", "Thanks for reaching out! I'll get back to you by end of day."),
+            ("Swift main actor", "", "@MainActor\nfinal class Model {}"),
+        ] {
+            context.insert(Snippet(title: title, text: text, keyword: keyword))
+        }
         let pinned = ["/Applications/Claude.app", "/Applications/Ghostty.app", "/Applications/Visual Studio Code.app",
                       "/Applications/Telegram.app", "/System/Applications/Calendar.app"]
         model.pinApps(paths: pinned.filter { FileManager.default.fileExists(atPath: $0) })

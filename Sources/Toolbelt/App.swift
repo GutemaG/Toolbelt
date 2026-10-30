@@ -272,7 +272,10 @@ final class SettingsWindow {
 
     func show(model: AppModel) {
         if window == nil {
-            let host = NSHostingController(rootView: SettingsView().environment(model).themed())
+            let host = NSHostingController(rootView: SettingsView()
+                .environment(model)
+                .modelContainer(model.container)   // Snippets and other pages query the database.
+                .themed())
             let window = NSWindow(contentViewController: host)
             window.title = "Toolbelt Settings"
             window.styleMask = [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView]
@@ -311,7 +314,7 @@ enum Store {
 
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: ClipItem.self, AppLaunch.self, Capture.self, configurations: ModelConfiguration(url: url))
+            return try ModelContainer(for: ClipItem.self, AppLaunch.self, Capture.self, Snippet.self, configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }

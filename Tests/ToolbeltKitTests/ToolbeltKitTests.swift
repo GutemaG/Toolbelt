@@ -160,3 +160,10 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(TimerRules.title(5400) == "1 h 30 min")
     #expect(TimerRules.title(45) == "45 s")
 }
+
+@Test func snippetSearch() {
+    #expect(SnippetRules.score(query: ";addr", title: "Home address", keyword: ";addr", text: "1 Main St") == 4)
+    #expect(SnippetRules.score(query: "home", title: "Home address", keyword: ";addr", text: "1 Main St") == 3)
+    #expect(SnippetRules.score(query: "main st", title: "Home address", keyword: "", text: "1 Main St") == 1)
+    #expect(SnippetRules.score(query: "zebra", title: "Home address", keyword: "", text: "1 Main St") == nil)
+}

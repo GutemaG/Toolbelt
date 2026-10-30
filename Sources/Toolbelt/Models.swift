@@ -77,6 +77,8 @@ final class AppModel {
     var timerTick = 0
     /// Bumped after switching sound output or mute, so the tiles redraw.
     var soundTick = 0
+    /// The snippet open in Settings > Snippets.
+    var editingSnippet: UUID?
     /// Colors picked, newest first, as "#RRGGBB".
     var recentColors: [String] = []
 

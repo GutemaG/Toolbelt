@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake
 
     var id: String { rawValue }
 
@@ -12,6 +12,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: "Launcher"
         case .clipboard: "Clipboard"
+        case .snippets: "Snippets"
         case .screenshots: "Screenshots"
         case .recording: "Recording"
         case .colors: "Colors"
@@ -27,6 +28,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: "magnifyingglass"
         case .clipboard: "doc.on.clipboard"
+        case .snippets: "text.quote"
         case .screenshots: "camera.viewfinder"
         case .recording: "record.circle"
         case .colors: "eyedropper"
@@ -43,6 +45,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: "Find and open apps, with your pinned apps on top."
         case .clipboard: "Search everything you copied and paste it again."
+        case .snippets: "Saved text you paste by keyword or search."
         case .screenshots: "Capture an area, a window or the whole screen."
         case .recording: "Record an area, a window or the screen to a movie."
         case .colors: "Pick any color on the screen and copy it."
@@ -59,6 +62,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: .blue
         case .clipboard: .orange
+        case .snippets: .mint
         case .screenshots: .purple
         case .recording: .red
         case .colors: .teal
@@ -74,6 +78,7 @@ enum Tool: String, CaseIterable, Identifiable {
         switch self {
         case .launcher: "Find and open apps"
         case .clipboard: "Search clipboard history"
+        case .snippets: "Paste a snippet"
         case .screenshots: "Take a screenshot"
         case .recording: "Record the screen"
         case .colors: "Pick a color"
