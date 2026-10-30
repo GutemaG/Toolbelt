@@ -110,7 +110,7 @@ struct ToolbeltView: View {
         }
         .padding(2)
         // Half a row's height: a capsule on one row, rounded corners on more.
-        .background(.fill.tertiary, in: .rect(cornerRadius: 14))
+        .background(.fill.tertiary, in: .rect(cornerRadius: 14)) // grid: ok a radius of half the row, not spacing
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Tools")
     }
