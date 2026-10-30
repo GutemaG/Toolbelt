@@ -15,22 +15,22 @@ struct ToolbeltView: View {
     let surface: Surface
     /// Set for a tool's own menu bar icon: shows only that tool, no picker.
     var fixedTool: Tool? = nil
-    @Environment(AppModel.self) private var model
-    @Query(sort: \ClipItem.copiedAt, order: .reverse) private var clips: [ClipItem]
-    @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) private var pinnedLaunches: [AppLaunch]
-    @Query(sort: \Capture.createdAt, order: .reverse) private var captures: [Capture]
-    @State private var query = ""
-    @State private var selected = 0
+    @Environment(AppModel.self) var model
+    @Query(sort: \ClipItem.copiedAt, order: .reverse) var clips: [ClipItem]
+    @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) var pinnedLaunches: [AppLaunch]
+    @Query(sort: \Capture.createdAt, order: .reverse) var captures: [Capture]
+    @State var query = ""
+    @State var selected = 0
     /// Bumped by the arrow keys. Only keyboard moves scroll; hovering never does.
-    @State private var keyboardMoves = 0
-    @State private var window: NSWindow?
-    @State private var monitor: Any?
-    @FocusState private var searchFocused: Bool
+    @State var keyboardMoves = 0
+    @State var window: NSWindow?
+    @State var monitor: Any?
+    @FocusState var searchFocused: Bool
 
-    private var tool: Tool { fixedTool ?? model.tool }
+    var tool: Tool { fixedTool ?? model.tool }
     /// Safe before the recorder exists, which can happen while the app starts.
-    private var isRecording: Bool { model.isRecording }
-    private var panelTools: [Tool] { ToolPrefs.shared.panelTools }
+    var isRecording: Bool { model.isRecording }
+    var panelTools: [Tool] { ToolPrefs.shared.panelTools }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -60,7 +60,7 @@ struct ToolbeltView: View {
 
     // MARK: Parts
 
-    private var header: some View {
+    var header: some View {
         @Bindable var model = model
         return HStack(spacing: Space.md) {
             Image(systemName: "magnifyingglass")
@@ -96,51 +96,7 @@ struct ToolbeltView: View {
         .padding(.vertical, Space.md)
     }
 
-    /// A thin row of capture buttons under the search field in the Launcher,
-    /// so screenshots and recording are one click from the menu bar.
-    @ViewBuilder
-    private var quickActions: some View {
-        let prefs = ToolPrefs.shared
-        let shots = prefs.enabled.contains(.screenshots), record = prefs.enabled.contains(.recording)
-        if tool == .launcher, !model.pickingApps, shots || record {
-            HStack(spacing: Space.sm) {
-                if shots {
-                    ForEach(CaptureMode.allCases) { mode in
-                        quickButton(mode.title, symbol: mode.symbol,
-                                    help: mode == .screen ? "Screenshot of the whole screen (⌃⇧3)"
-                                        : "Screenshot of \(mode == .area ? "an area" : "a window") (⌃⇧4)") {
-                            close()
-                            CaptureController.shared.screenshot(mode)
-                        }
-                    }
-                }
-                if shots && record {
-                    Divider().frame(height: Space.lg)
-                }
-                if record {
-                    quickButton(isRecording ? "Stop" : "Record", symbol: isRecording ? "stop.circle.fill" : "record.circle",
-                                help: isRecording ? "Stop recording (⌃⇧5)" : "Record an area, a window or the screen (⌃⇧5)") {
-                        close()
-                        isRecording ? Recorder.shared?.stop() : Recorder.shared?.start(.area)
-                    }
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, Space.lg)
-            .padding(.vertical, Space.sm)
-            Divider()
-        }
-    }
-
-    private func quickButton(_ title: String, symbol: String, help: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
-        }
-        .buttonStyle(QuickActionStyle())
-        .help(help)
-    }
-
-    private var placeholder: String {
+    var placeholder: String {
         switch tool {
         case .clipboard: return "Search Clips"
         case .screenshots: return "Search Screenshots"
@@ -150,7 +106,7 @@ struct ToolbeltView: View {
         }
     }
 
-    private var results: some View {
+    var results: some View {
         let sections = self.sections
         let count = sections.reduce(0) { $0 + $1.entries.count }
         return ScrollViewReader { proxy in
@@ -209,7 +165,7 @@ struct ToolbeltView: View {
     }
 
     @ViewBuilder
-    private func row(_ entry: Entry, selected: Bool) -> some View {
+    func row(_ entry: Entry, selected: Bool) -> some View {
         HStack(spacing: Space.md) {
             switch entry {
             case .app(let app):
@@ -279,7 +235,7 @@ struct ToolbeltView: View {
     }
 
     /// A pinned app as an icon with its name below, or the Add… tile.
-    private func tile(_ entry: Entry, selected: Bool) -> some View {
+    func tile(_ entry: Entry, selected: Bool) -> some View {
         VStack(spacing: Space.xs) {
             switch entry {
             case .app(let app):
@@ -325,7 +281,7 @@ struct ToolbeltView: View {
         .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
     }
 
-    private func tileHelp(_ entry: Entry) -> String {
+    func tileHelp(_ entry: Entry) -> String {
         switch entry {
         case .add: return "Pin apps to the top of the Launcher"
         case .action(let action): return action.help
@@ -334,7 +290,7 @@ struct ToolbeltView: View {
     }
 
     @ViewBuilder
-    private func menu(for entry: Entry) -> some View {
+    func menu(for entry: Entry) -> some View {
         switch entry {
         case .app(let app):
             Button("Open") { activate(entry, plainText: false) }
@@ -380,7 +336,7 @@ struct ToolbeltView: View {
     }
 
     @ViewBuilder
-    private var emptyState: some View {
+    var emptyState: some View {
         if !query.isEmpty {
             ContentUnavailableView("No Results", systemImage: "magnifyingglass",
                                    description: Text("Nothing matches “\(query)”."))
@@ -392,7 +348,7 @@ struct ToolbeltView: View {
         }
     }
 
-    private var footer: some View {
+    var footer: some View {
         HStack(spacing: Space.md) {
             Text(hint)
                 .font(.caption)
@@ -418,7 +374,7 @@ struct ToolbeltView: View {
         .padding(.vertical, Space.sm)
     }
 
-    private var hint: String { ToolActions.hint(for: tool, model: model, surface: surface) }
+    var hint: String { ToolActions.hint(for: tool, model: model, surface: surface) }
 
     // MARK: Data
 
@@ -454,24 +410,24 @@ struct ToolbeltView: View {
         var grid = false
     }
 
-    private var gridColumns: Int { surface == .panel ? 6 : 4 }
+    var gridColumns: Int { surface == .panel ? 6 : 4 }
 
     /// Pinned apps that still exist, in grid order.
-    private var pinnedApps: [LaunchCandidate] {
+    var pinnedApps: [LaunchCandidate] {
         pinnedLaunches
             .filter { FileManager.default.fileExists(atPath: $0.path) }
             .map { LaunchCandidate(name: AppIndex.name(atPath: $0.path), path: $0.path,
                                    launchCount: $0.count, lastLaunched: $0.lastLaunched) }
     }
 
-    private var pinnedPaths: Set<String> { Set(pinnedLaunches.map(\.path)) }
+    var pinnedPaths: Set<String> { Set(pinnedLaunches.map(\.path)) }
 
     /// How many entries the grid at the top holds (0 when it is hidden).
-    private var gridCount: Int {
+    var gridCount: Int {
         sections.first.map { $0.grid ? $0.entries.count : 0 } ?? 0
     }
 
-    private var sections: [Section] {
+    var sections: [Section] {
         switch tool {
         case .launcher:
             let candidates = model.launchCandidates()
@@ -522,11 +478,11 @@ struct ToolbeltView: View {
         }
     }
 
-    private var flatEntries: [Entry] { sections.flatMap(\.entries) }
+    var flatEntries: [Entry] { sections.flatMap(\.entries) }
 
     // MARK: Actions
 
-    private func reset() {
+    func reset() {
         model.pickingApps = false
         query = ""
         selected = 0
@@ -534,7 +490,7 @@ struct ToolbeltView: View {
         searchFocused = true
     }
 
-    private func activate(_ entry: Entry, plainText: Bool) {
+    func activate(_ entry: Entry, plainText: Bool) {
         switch entry {
         case .app(let app):
             if model.pickingApps {
@@ -567,7 +523,7 @@ struct ToolbeltView: View {
         }
     }
 
-    private func stopPicking() {
+    func stopPicking() {
         model.pickingApps = false
         query = ""
         selected = 0
@@ -575,7 +531,7 @@ struct ToolbeltView: View {
     }
 
     /// Add…: pick apps in an Open panel and pin them.
-    private func chooseAppsToPin() {
+    func chooseAppsToPin() {
         // The popover closes by itself when the Open panel takes focus.
         if surface == .panel { close() }
         NSApp.unhide(nil)
@@ -595,80 +551,15 @@ struct ToolbeltView: View {
         }
     }
 
-    private func close() {
+    func close() {
         switch surface {
         case .panel: PanelController.shared.hide()
         case .popover: StatusItems.shared?.closePopovers()
         }
     }
 
-    private func openSettings() {
+    func openSettings() {
         close()
         SettingsWindow.shared.show(model: model)
     }
-
-    // MARK: Keyboard
-
-    /// Arrow keys, Return, Escape, and Command shortcuts while the search
-    /// field has focus. A local monitor sees them before the field editor.
-    private func installKeyMonitor() {
-        guard monitor == nil else { return }
-        monitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
-            guard let window, event.window === window else { return event }
-            return handle(event) ? nil : event
-        }
-    }
-
-    private func removeKeyMonitor() {
-        if let monitor { NSEvent.removeMonitor(monitor) }
-        monitor = nil
-    }
-
-    /// Key codes of 1 to 9 on the top row.
-    private static let digitKeys: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25]
-
-    private func handle(_ event: NSEvent) -> Bool {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let entries = flatEntries
-        let current = entries.indices.contains(selected) ? entries[selected] : nil
-        switch (event.keyCode, flags.contains(.command)) {
-        case (125, false): // Down: one row, or one grid row inside the pinned grid
-            let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
-            selected = min(selected + step, max(entries.count - 1, 0))
-        case (126, false): // Up
-            if selected < gridCount { selected = max(selected - gridColumns, 0) }
-            else if selected == gridCount { selected = max(gridCount - 1, 0) }
-            else { selected = max(selected - 1, 0) }
-        case (124, false) where selected < gridCount && query.isEmpty: // Right, inside the grid
-            selected = min(selected + 1, gridCount - 1)
-        case (123, false) where selected < gridCount && query.isEmpty: // Left, inside the grid
-            selected = max(selected - 1, 0)
-        case (36, _), (76, _): // Return, Enter
-            if let current { activate(current, plainText: flags.contains(.option)) }
-        case (53, _): // Escape
-            if !query.isEmpty { query = "" } else if model.pickingApps { stopPicking() } else { close() }
-        case (48, false) where fixedTool == nil && panelTools.count > 1: // Tab switches tool
-            let index = panelTools.firstIndex(of: model.tool) ?? 0
-            model.tool = panelTools[(index + 1) % panelTools.count]
-        case (let key, true) where fixedTool == nil && Self.digitKeys.firstIndex(of: key).map({ $0 < panelTools.count }) == true:
-            model.tool = panelTools[Self.digitKeys.firstIndex(of: key)!] // Command-1 to Command-9
-        case (43, true): openSettings()            // Command-,
-        case (12, true): NSApp.terminate(nil)      // Command-Q
-        case (35, true): // Command-P pins a clip or an app
-            switch current {
-            case .clip(let clip)?: model.togglePin(clip)
-            case .app(let app)?: model.togglePin(appPath: app.path)
-            default: return false
-            }
-        case (51, true): // Command-Delete
-            guard case .clip(let clip)? = current else { return false }
-            model.delete(clip)
-            selected = min(selected, max(entries.count - 2, 0))
-        default:
-            return false
-        }
-        if [123, 124, 125, 126].contains(event.keyCode) { keyboardMoves += 1 }
-        return true
-    }
 }
-
