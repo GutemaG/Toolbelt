@@ -307,3 +307,58 @@ func toolVersions(_ output: String, marker: String?, expected: String) {
     #expect(MixerRules.nudge(0.64, by: 0.1) == 0.7 && MixerRules.nudge(0.95, by: 0.1) == 1 && MixerRules.nudge(0.05, by: -0.1) == 0)
     #expect(MixerRules.percent(0.644) == "64%" && MixerRules.percent(2) == "100%")
 }
+
+/// Readings of a laptop lying still (gravity on z, a little noise), with
+/// knocks: short ringing jolts on z, like a knuckle on the palm rest.
+private struct Motion {
+    var knocks: [Double] = []
+    var strength = 0.08
+    var typingAt: [Double] = []
+    var length = 2.0
+
+    func run(sensitivity: Double = 0.6, bump: (start: Double, size: Double)? = nil) -> [KnockDetector.Event] {
+        var detector = KnockDetector(sensitivity: sensitivity)
+        var events: [KnockDetector.Event] = []
+        var seed: UInt64 = 7
+        for index in 0..<Int(length * 800) {
+            let t = Double(index) / 800
+            seed = seed &* 6364136223846793005 &+ 1442695040888963407
+            var z = -1 + (Double(seed >> 40) / Double(1 << 24) - 0.5) * 0.004
+            for start in knocks where t >= start && t < start + 0.06 {
+                let age = t - start
+                z += strength * exp(-age / 0.008) * cos(2 * .pi * 150 * age)
+            }
+            if let bump, t >= bump.start, t < bump.start + 0.3 { z += bump.size * sin(.pi * (t - bump.start) / 0.3) }
+            let typing = typingAt.contains { t >= $0 && t < $0 + 0.5 }
+            if let event = detector.add(time: t, x: 0, y: 0, z: z, typing: typing) { events.append(event) }
+        }
+        return events
+    }
+}
+
+@Test func knockCounts() {
+    #expect(Motion(knocks: [0.5]).run().filter { $0 != .ignored(.weak) } == [.knocks(1)])
+    #expect(Motion(knocks: [0.5, 0.75]).run().contains(.knocks(2)))
+    #expect(Motion(knocks: [0.5, 0.7, 0.9]).run().contains(.knocks(3)))
+    #expect(Motion(knocks: [0.5]).run().contains(.knocks(1)) && !Motion(knocks: [0.5, 1.5]).run().contains(.knocks(2)))
+}
+
+@Test func knockIgnoresWhatIsNotAKnock() {
+    #expect(Motion().run().isEmpty)
+    #expect(!Motion(knocks: [0.6], typingAt: [0.3]).run().contains { if case .knocks = $0 { true } else { false } })
+    #expect(!Motion().run(bump: (0.5, 0.2)).contains { if case .knocks = $0 { true } else { false } })
+    let drumming = Motion(knocks: [0.5, 0.6, 0.7, 0.8, 0.9]).run()
+    #expect(drumming.contains(.ignored(.burst)) && !drumming.contains { if case .knocks = $0 { true } else { false } })
+    #expect(!Motion(knocks: [0.5], strength: 0.015).run(sensitivity: 0).contains(.knocks(1)))
+}
+
+@Test func knockIgnoresTiltingTheLaptop() {
+    var detector = KnockDetector()
+    var knocks = 0
+    for index in 0..<(6 * 800) {
+        let t = Double(index) / 800
+        let tilt = min(max(t - 1, 0) / 0.5, 1) * 0.3 // tipped back over half a second, then left there
+        if case .knocks? = detector.add(time: t, x: tilt, y: 0, z: -(1 - tilt * tilt).squareRoot(), typing: false) { knocks += 1 }
+    }
+    #expect(knocks == 0)
+}

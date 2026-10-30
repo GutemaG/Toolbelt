@@ -47,6 +47,8 @@ struct ToolbeltView: View {
                 InfoView(surface: surface, query: query)
             } else if tool == .camera {
                 CameraView(surface: surface, window: window)
+            } else if tool == .knock {
+                KnockView(surface: surface, window: window)
             } else if tool == .mixer {
                 VolumeMixerView(surface: surface, window: window, query: query)
             } else {
@@ -107,12 +109,12 @@ struct ToolbeltView: View {
 
     var searchRow: some View {
         HStack(spacing: Space.md) {
-            if tool == .camera {
+            if tool == .camera || tool == .knock {
                 // Nothing to search: the row keeps the title and, in the panel, the tool picker.
-                Image(systemName: Tool.camera.symbol)
+                Image(systemName: tool.symbol)
                     .font(.title2)
                     .foregroundStyle(.secondary)
-                Text(Tool.camera.title)
+                Text(tool.title)
                     .font(.title2)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {

@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, system, info, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, knock, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -22,6 +22,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Sound"
         case .mixer: "Volume Mixer"
         case .toggles: "Toggles"
+        case .knock: "Knock"
         case .system: "System"
         case .info: "Info"
         case .keepAwake: "Keep Awake"
@@ -42,6 +43,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "speaker.wave.2"
         case .mixer: "slider.horizontal.3"
         case .toggles: "switch.2"
+        case .knock: "hand.tap"
         case .system: "gauge.with.dots.needle.50percent"
         case .info: "info.circle"
         case .keepAwake: "cup.and.saucer"
@@ -63,6 +65,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Switch between speakers, headphones and AirPods."
         case .mixer: "Turn each app up, down or off on its own."
         case .toggles: "Dark Mode, desktop icons, hidden files, lock and more."
+        case .knock: "Knock on the MacBook to play music, take a screenshot and more."
         case .system: "CPU, memory, temperature, fans, and the apps using the most energy."
         case .info: "Battery health, storage, hardware, network, and your developer tools."
         case .keepAwake: "Stop the Mac from sleeping for a while."
@@ -84,6 +87,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: .cyan
         case .mixer: .orange
         case .toggles: .gray
+        case .knock: .purple
         case .system: .pink
         case .info: .blue
         case .keepAwake: .brown
@@ -104,6 +108,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Choose the sound output"
         case .mixer: "Set the volume of each app"
         case .toggles: "Flip a system switch"
+        case .knock: "Run actions by knocking on the Mac"
         case .system: "See CPU and energy use"
         case .info: "See details about this Mac"
         case .keepAwake: "Keep the Mac awake"

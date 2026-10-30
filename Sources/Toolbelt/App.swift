@@ -67,6 +67,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if prefs.enabled.contains(.clipboard) { model.clipboard.start() } else { model.clipboard.stop() }
         if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn { KeepAwake.shared.stop() }
         if !prefs.enabled.contains(.recording), Recorder.shared.isRecording { Recorder.shared.stop() }
+        Knock.shared.setEnabled(prefs.enabled.contains(.knock))
         if prefs.enabled.contains(.mixer) { VolumeMixer.shared.resume() } else { VolumeMixer.shared.stopAll() }
         SystemMonitor.shared.menuBar = prefs.enabled.contains(.system) && prefs.ownIcon.contains(.system)
             && UserDefaults.standard.object(forKey: SystemMonitor.menuBarKey) as? Bool ?? true

@@ -245,6 +245,20 @@ enum SelfTest {
             mixer.reset(fake)
             check("Reset brings an app back to full volume", mixer.level(fake) == 1 && !mixer.isMuted(fake))
 
+            // S-081 knock: the motion sensor opens and reads at full speed (motion only, nothing is run)
+            if KnockSensor.isPresent {
+                let sensor = KnockSensor(sensitivity: 0.6) { _ in }
+                let opened = sensor.begin()
+                try? await Task.sleep(for: .seconds(1.5))
+                let reading = sensor.take()
+                sensor.end()
+                check("the motion sensor opens", opened)
+                check("the motion sensor reads about 800 times a second", reading.rate > 400, "\(Int(reading.rate)) Hz, movement \(String(format: "%.4f", reading.level)) g")
+            } else {
+                print("SKIP knock: this Mac has no motion sensor")
+            }
+            check("test runs never listen for knocks", Knock.shared.isSimulated && Knock.shared.state == .off)
+
             // S-078 Info: every tab reads, offline (no public IP lookup)
             let offline = InfoReader.Options(locationAllowed: false, lookUpPublicIP: false)
             func rows(_ tab: InfoTab) async -> [InfoRow] { await InfoReader.read(tab, options: offline).flatMap(\.rows) }

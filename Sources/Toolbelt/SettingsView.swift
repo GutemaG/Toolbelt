@@ -63,6 +63,7 @@ struct SettingsView: View {
             case .sound: ToolSettings(tool: .sound)
             case .mixer: ToolSettings(tool: .mixer)
             case .toggles: ToolSettings(tool: .toggles)
+            case .knock: ToolSettings(tool: .knock)
             case .system: ToolSettings(tool: .system)
             case .info: ToolSettings(tool: .info)
             case .keepAwake: ToolSettings(tool: .keepAwake)
@@ -94,7 +95,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, knock, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -106,7 +107,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
-        case .timer, .sound, .mixer, .toggles, .system, .info, .keepAwake: .tools
+        case .timer, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -425,6 +426,8 @@ struct ToolSettings: View {
             ColorOptions()
         case .camera:
             CameraOptions()
+        case .knock:
+            KnockOptions()
         case .mixer:
             Section {
             } footer: {
@@ -670,6 +673,41 @@ private struct CameraOptions: View {
             Text("Options")
         } footer: {
             Text("The camera turns on only while Camera is open and turns off when the window closes. Photos go to your screenshot folder. Asks for Camera access the first time.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Settings > Knock.
+private struct KnockOptions: View {
+    @AppStorage(Knock.messageKey) private var message = true
+
+    var body: some View {
+        Section {
+            ForEach(1...3, id: \.self) { count in
+                LabeledContent(count == 1 ? "1 knock" : "\(count) knocks") {
+                    KnockActionPicker(count: count)
+                }
+            }
+        } header: {
+            Text("Knocks")
+        }
+        Section {
+            LabeledContent("Sensitivity") {
+                KnockSensitivitySlider()
+                    .frame(width: 220)
+            }
+            Toggle(isOn: $message) {
+                Text("Show what each knock did")
+                Text("A short message near the top of the screen, handy while you get used to it.")
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("Knock reads the motion sensor in the MacBook, about 800 times a second, only while Knock is on and the screen is awake. Knocks while you type are ignored. Play, Next Track and Lock Screen need Accessibility. The sensor is not a public part of macOS, so an update may stop it working. Based on the open-source mactap app.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

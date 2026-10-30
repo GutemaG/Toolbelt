@@ -37,4 +37,6 @@ Every word on screen comes from this table. Code names may differ
 | Take Photo | Save the camera preview as an image in the screenshot folder | snap, capture, shoot |
 | Volume Mixer | The tool with the output volume and a volume for each app playing sound | mixer, app volume, per-app volume |
 | Reset to Full Volume | Put an app back at 100% and stop playing it through Toolbelt | restore, default |
+| Knock | The tool that runs an action when you knock on the MacBook one, two or three times | tap, bonk, gesture |
+| Sensitivity | How light a knock still counts, from Firm to Light | threshold, gain |
 | Copy All | Copy everything on the open Info tab as plain text | export, report |

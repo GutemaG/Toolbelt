@@ -596,11 +596,26 @@ UX:
 - Permission: System Audio Recording is asked the first time an app is turned down, not before; apps at full volume never need it
 Status: done
 
+### S-081 Knock on the MacBook to run an action
+As the user, I knock once, twice or three times on the palm rest, the lid or the desk, and Toolbelt plays or pauses music, takes a screenshot, or runs another action I chose.
+Acceptance:
+- [unit] One, two and three knocks are counted; typing, a slow bump, tilting the laptop, drumming and a light tap at low sensitivity are not knocks.
+- [self] The motion sensor opens and reads about 800 times a second; test runs never listen.
+- [snap] panel-knock shows the knock actions and the tuning card; settings-knock shows the same with the message switch.
+- [manual] On this MacBook: two knocks play or pause music, typing does not trigger anything, and the meter jumps past the line on a knock.
+UX:
+- Flow: Settings > Knock on -> knock -> a message says "2 knocks: Play or Pause" -> change the action per count in the page or Settings
+- Surface: the shared panel and popover (status, actions, meter, sensitivity) and Settings > Knock
+- States: "No Motion Sensor" on Macs without one; "Knock Is Off"; the last knock or why a jolt was ignored ("Ignored: Typing")
+- Power: reads only while Knock is on and the screen is awake; the meter updates only while its page shows
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
 - GIF export (V2 research). Scrolling capture that scrolls for you (needs Accessibility).
 - Window switcher, command palette. Fan control (needs a root helper).
+- Knock stage 2: left and right edges, more actions, per-app actions.
 - Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.
 - Copied Finder files in clipboard history.
