@@ -61,6 +61,7 @@ struct SettingsView: View {
             case .sound: ToolSettings(tool: .sound)
             case .toggles: ToolSettings(tool: .toggles)
             case .system: ToolSettings(tool: .system)
+            case .info: ToolSettings(tool: .info)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -90,7 +91,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -102,7 +103,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
-        case .timer, .sound, .toggles, .system, .keepAwake: .tools
+        case .timer, .sound, .toggles, .system, .info, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -403,6 +404,13 @@ struct ToolSettings: View {
             KeepAwakeOptions()
         case .system:
             SystemOptions()
+        case .info:
+            Section {
+            } footer: {
+                Text("Info opens on Battery; switch tabs with ← and →. Serial numbers, hardware addresses and the public IP stay hidden until you click the eye. The public IP is looked up at api.ipify.org when Network opens, and the Wi-Fi name needs Location Services, asked only when you click it.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .toggles:
             Section {
             } footer: {

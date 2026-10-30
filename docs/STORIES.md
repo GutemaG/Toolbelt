@@ -554,6 +554,20 @@ UX:
 - States: "Scroll down slowly"; "2,480 px captured"; "Scroll back up a little" when a jump is too big to join; "Reached 30,000 px"
 Status: done
 
+### S-078 See details about this Mac in Info
+As the user, I open Info and see Battery first, then switch to Storage, Hardware, Network or Developer with the tabs or ← and →.
+Acceptance:
+- [unit] Tool versions are read from their output; macOS names, durations, battery condition and Wi-Fi signal words are right.
+- [self] Every tab reads offline; serial numbers are hidden; Developer finds Git with a version; no public IP lookup in tests.
+- [snap] panel-info (Battery) and panel-info-<tab> for the other four.
+- [manual] Clicking "Allow Location to show…" asks for Location and then shows the Wi-Fi name.
+UX:
+- Flow: tool picker -> Battery tab -> ←/→ or click a tab -> click a value to copy, eye to show a secret, ⌘R to read again, Copy All for the tab as text
+- Surface: the shared panel and popover; tabs are a segmented control (a few related views of one thing)
+- States: "Reading Developer…" while loading; "No Battery" on desktops; "No developer tools are installed."; "No Results" for a search
+- Privacy: serials, MAC and public IP masked until shown; public IP from api.ipify.org only when Network opens; Location asked only on click
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.

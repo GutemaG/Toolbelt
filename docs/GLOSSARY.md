@@ -31,3 +31,5 @@ Every word on screen comes from this table. Code names may differ
 | Energy | What an app and its helpers drew over the last few seconds, in mW or W | power, impact |
 | Bring to Front | Switch to a running app from System's list | open, focus, activate |
 | Scrolling capture | A screenshot taller than the screen, joined from an area as it is scrolled by hand | long screenshot, stitch, panorama |
+| Info | The tool with Battery, Storage, Hardware, Network and Developer tabs about this Mac | About, specs, system information |
+| Copy All | Copy everything on the open Info tab as plain text | export, report |

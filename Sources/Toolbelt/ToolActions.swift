@@ -21,7 +21,7 @@ enum ToolActions {
     /// The grid title and tiles, or nil for tools with their own list (Launcher, Clipboard).
     static func grid(for tool: Tool, model: AppModel, query: String = "") -> (title: String, actions: [ToolAction])? {
         switch tool {
-        case .launcher, .clipboard, .system:
+        case .launcher, .clipboard, .system, .info:
             return nil
         case .snippets:
             guard query.isEmpty else { return nil }
@@ -165,6 +165,7 @@ enum ToolActions {
         case .colors: return "\(ShortcutID.color.label) Pick   ↩ Copy as \(ColorPicker.format.rawValue.uppercased())"
         case .windows: return "↩ Move the front window   Shortcuts in Settings > Windows"
         case .toggles: return "↩ Flip the switch   Highlighted ones are on"
+        case .info: return "←→ Switch Tabs   Click a value to copy it   ⌘R Refresh"
         case .system: return "↩ Bring to Front   Right-click to quit   Energy over the last 6 seconds"
         case .sound: return "↩ Switch output   The highlighted one is playing now"
         case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"

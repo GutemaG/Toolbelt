@@ -55,6 +55,22 @@ enum Snapshot {
                 }
                 model.pickingApps = false
             }
+            // Info's other tabs, once each has been read.
+            if only == nil || only?.contains("info") == true {
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PanelController.shared.show(.info)
+                    try? await Task.sleep(for: .seconds(0.5))
+                    for tab in InfoTab.allCases.dropFirst() {
+                        MacInfo.shared.tab = tab
+                        for _ in 0..<40 where MacInfo.shared.loading.contains(tab) || MacInfo.shared.sections[tab] == nil {
+                            try? await Task.sleep(for: .seconds(0.25))
+                        }
+                        try? await Task.sleep(for: .seconds(0.5))
+                        capture(to: "\(dir)/panel-info-\(tab.rawValue)-\(mode).png", window: PanelController.shared.panel)
+                    }
+                }
+            }
             PanelController.shared.hide()
             // The scrolling capture bar, as it first shows.
             if only == nil || only?.contains("scrollbar") == true {

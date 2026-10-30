@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -21,6 +21,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Sound"
         case .toggles: "Toggles"
         case .system: "System"
+        case .info: "Info"
         case .keepAwake: "Keep Awake"
         }
     }
@@ -38,6 +39,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "speaker.wave.2"
         case .toggles: "switch.2"
         case .system: "gauge.with.dots.needle.50percent"
+        case .info: "info.circle"
         case .keepAwake: "cup.and.saucer"
         }
     }
@@ -56,6 +58,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Switch between speakers, headphones and AirPods."
         case .toggles: "Dark Mode, desktop icons, hidden files, lock and more."
         case .system: "CPU, memory, temperature, fans, and the apps using the most energy."
+        case .info: "Battery health, storage, hardware, network, and your developer tools."
         case .keepAwake: "Stop the Mac from sleeping for a while."
         }
     }
@@ -74,6 +77,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: .cyan
         case .toggles: .gray
         case .system: .pink
+        case .info: .blue
         case .keepAwake: .brown
         }
     }
@@ -91,6 +95,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .sound: "Choose the sound output"
         case .toggles: "Flip a system switch"
         case .system: "See CPU and energy use"
+        case .info: "See details about this Mac"
         case .keepAwake: "Keep the Mac awake"
         }
     }

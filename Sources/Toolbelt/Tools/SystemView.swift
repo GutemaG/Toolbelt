@@ -76,7 +76,7 @@ private struct GaugeRow: View {
     }
 }
 
-private struct Bar: View {
+struct Bar: View {
     let fraction: Double
     let color: Color
 

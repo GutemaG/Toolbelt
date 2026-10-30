@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import IOKit.ps
 import CoreImage
 import ScreenCaptureKit
 import SwiftData
@@ -213,6 +214,28 @@ enum SelfTest {
             } ?? 999
             check("the joined image is the whole page, top first", joined?.height == 1200 && difference < 300,
                   "\(joined?.width ?? 0)×\(joined?.height ?? 0), worst row \(difference)")
+
+            // S-078 Info: every tab reads, offline (no public IP lookup)
+            let offline = InfoReader.Options(locationAllowed: false, lookUpPublicIP: false)
+            func rows(_ tab: InfoTab) async -> [InfoRow] { await InfoReader.read(tab, options: offline).flatMap(\.rows) }
+            let battery = await rows(.battery)
+            let hasBattery = IOPSCopyPowerSourcesList(IOPSCopyPowerSourcesInfo().takeRetainedValue()).takeRetainedValue() as? [Any] ?? []
+            check("Battery shows charge, cycles and condition",
+                  hasBattery.isEmpty || (battery.contains { $0.label == "Cycle count" } && battery.contains { $0.label == "Condition" } && battery.contains { $0.label == "Charge" }),
+                  battery.prefix(4).map { "\($0.label)=\($0.value)" }.joined(separator: ", "))
+            let hardware = await rows(.hardware)
+            check("Hardware names the chip and macOS build", hardware.contains { $0.label == "Chip" && $0.value == InfoReader.sysctlString("machdep.cpu.brand_string") }
+                  && hardware.contains { $0.label == "Build" && $0.value == InfoReader.sysctlString("kern.osversion") })
+            check("serial numbers are hidden until shown", hardware.filter { $0.label == "Serial number" }.allSatisfy(\.secret))
+            let storage = await InfoReader.read(.storage, options: offline)
+            check("Storage lists the startup volume and its disk", storage.contains { $0.rows.contains { $0.label == "FileVault" } }
+                  && storage.contains { $0.rows.contains { $0.label == "Health" } }, storage.map(\.title).joined(separator: ", "))
+            let network = await rows(.network)
+            check("Network shows DNS and the public IP only when asked", network.contains { $0.label == "DNS servers" } && !network.contains { $0.label == "Public IP" })
+            let started = Date.now
+            let developer = await rows(.developer)
+            check("Developer finds installed tools with versions", developer.contains { $0.label == "Git" && $0.value.first?.isNumber == true },
+                  "\(developer.count) in \(String(format: "%.1f", Date.now.timeIntervalSince(started))) s: " + developer.prefix(6).map { "\($0.label) \($0.value)" }.joined(separator: ", "))
 
             // S-076 System: read only, nothing is quit
             let sensors = SystemSensors()

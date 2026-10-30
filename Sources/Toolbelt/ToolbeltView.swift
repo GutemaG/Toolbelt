@@ -43,7 +43,11 @@ struct ToolbeltView: View {
                 SystemGauges(window: window)
                 Divider()
             }
-            results
+            if tool == .info {
+                InfoView(surface: surface, query: query)
+            } else {
+                results
+            }
             Divider()
             footer
         }

@@ -256,3 +256,35 @@ private struct ScrollPage {
     blink[40] = [UInt8](repeating: 0, count: 16) // a text cursor appears
     #expect(stitcher.add(blink) == .same)
 }
+
+@Test("Tool versions", arguments: [
+    ("go version go1.22.1 darwin/arm64", nil, "1.22.1"),
+    ("rustc 1.77.0 (aedd173a2 2024-03-17)", nil, "1.77.0"),
+    ("pip 24.0 from /usr/lib/python3.12/site-packages/pip (python 3.12)", nil, "24.0"),
+    ("Docker version 27.0.3, build 7d4bcd8", nil, "27.0.3"),
+    ("openjdk version \"21.0.2\" 2024-01-16", nil, "21.0.2"),
+    ("swift-driver version: 1.120.5 Apple Swift version 6.2 (swiftlang-6.2.0.1)", "Swift version", "6.2"),
+    ("Client Version: v1.30.0\nKustomize Version: v5.0.4", nil, "1.30.0"),
+    ("v24.22.0", nil, "24.22.0"),
+    ("9.0.100-rc.2.24474.11", nil, "9.0.100-rc.2.24474.11"),
+    ("git version 2.39.3 (Apple Git-146)", nil, "2.39.3"),
+] as [(String, String?, String)])
+func toolVersions(_ output: String, marker: String?, expected: String) {
+    #expect(InfoRules.version(in: output, after: marker) == expected)
+}
+
+@Test func infoFormatting() {
+    #expect(InfoRules.version(in: "command not found") == nil)
+    #expect(InfoRules.macOSName(major: 26) == "macOS Tahoe")
+    #expect(InfoRules.macOSName(major: 27) == "macOS 27")
+    #expect(InfoRules.duration(8 * 60 + 30) == "8 minutes")
+    #expect(InfoRules.duration(3600 + 60) == "1 hour, 1 minute")
+    #expect(InfoRules.duration(3 * 86400 + 4 * 3600 + 120) == "3 days, 4 hours")
+    #expect(InfoRules.clock(minutes: 125) == "2:05")
+    #expect(InfoRules.clock(minutes: 65535) == nil)
+    #expect(InfoRules.maximumCapacity(fullCharge: 8962, design: 8579) == 100)
+    #expect(InfoRules.maximumCapacity(fullCharge: 7000, design: 8579) == 82)
+    #expect(InfoRules.batteryCondition("Good", maximumCapacity: 100) == "Normal")
+    #expect(InfoRules.batteryCondition(nil, maximumCapacity: 75) == "Service Recommended")
+    #expect(InfoRules.signal(rssi: -45) == "Excellent" && InfoRules.signal(rssi: -65) == "Fair" && InfoRules.signal(rssi: -80) == "Weak")
+}
