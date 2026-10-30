@@ -1,0 +1,27 @@
+# Toolbelt glossary
+
+Every word on screen comes from this table. Code names may differ
+(`ClipItem`, `AppLaunch`); the screen never shows them.
+
+| Term | Means | Not |
+| --- | --- | --- |
+| Toolbelt | The app and its menu bar icon | menu, widget |
+| Tool | One feature in Toolbelt with its own tab and shortcut (Launcher, Clipboard) | module, app, plugin |
+| Launcher | The tool that finds and opens apps | app search, runner, Spotlight |
+| Clipboard | The tool that shows clipboard history; also the tab name | pasteboard, clips tab |
+| Clipboard history | All clips Toolbelt has saved, newest first | log, list, archive |
+| Clip | One thing you copied: text, a link, or an image | item, entry, record, snippet |
+| Pinned | Clips kept at the top and never removed by the size limit | favorite, starred, saved |
+| Recent | Unpinned clips, newest first | history, unpinned |
+| Frequent | The apps you open most, shown when the Launcher search is empty | favorites, top, suggested |
+| Search | Type to filter the current tool's list | filter, find, query |
+| Open | Start an app, or bring it to the front if it is running | launch, run, start |
+| Copy | Put a clip back on the clipboard so Command-V pastes it | restore, select, use |
+| Paste | Copy a clip and insert it into the app you were in | insert, send, type |
+| Paste as Plain Text | Paste without fonts, colors, or links | paste unformatted, strip formatting |
+| Pin / Unpin | Move a clip into or out of Pinned | favorite, keep, lock |
+| Delete | Remove one clip; Undo brings it back right after | remove, trash |
+| Clear History | Delete all unpinned clips, after a confirmation | reset, wipe, empty |
+| Pause Recording / Resume Recording | Stop or start saving new copies to clipboard history | disable, mute, stop |
+| Source app | The app a clip was copied from, shown as its icon | origin, owner |
+| Settings | Toolbelt's settings window (Command-,) | Preferences, options |
