@@ -60,9 +60,38 @@ struct ToolbeltView: View {
 
     // MARK: Parts
 
+    /// In the panel the tool picker sits beside the search field; the popover
+    /// is narrower, so it gets its own row below.
     var header: some View {
+        VStack(spacing: 0) {
+            searchRow
+            if surface == .popover, showsPicker {
+                toolPicker
+                    .padding(.horizontal, Space.lg)
+                    .padding(.bottom, Space.md)
+            }
+        }
+    }
+
+    var showsPicker: Bool { fixedTool == nil && panelTools.count > 1 }
+
+    var toolPicker: some View {
         @Bindable var model = model
-        return HStack(spacing: Space.md) {
+        return Picker("Tool", selection: $model.tool) {
+            ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
+                Label(tool.title, systemImage: tool.symbol)
+                    .labelStyle(.iconOnly)
+                    .help("\(tool.help) (⌘\(index + 1))")
+                    .tag(tool)
+            }
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+        .fixedSize()
+    }
+
+    var searchRow: some View {
+        HStack(spacing: Space.md) {
             Image(systemName: "magnifyingglass")
                 .font(.title2)
                 .foregroundStyle(.secondary)
@@ -78,18 +107,8 @@ struct ToolbeltView: View {
                     .foregroundStyle(.secondary)
                     .help("Clear the search")
             }
-            if fixedTool == nil, panelTools.count > 1 {
-                Picker("Tool", selection: $model.tool) {
-                    ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
-                        Label(tool.title, systemImage: tool.symbol)
-                            .labelStyle(.iconOnly)
-                            .help("\(tool.help) (⌘\(index + 1))")
-                            .tag(tool)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .labelsHidden()
-                .fixedSize()
+            if surface == .panel, showsPicker {
+                toolPicker
             }
         }
         .padding(.horizontal, Space.lg)
