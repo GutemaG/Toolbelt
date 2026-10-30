@@ -334,10 +334,159 @@ UX:
 - Access: tiles are buttons that read the app name; arrows, Return and ⌘P work without a mouse
 Status: done
 
+## V2-M1 Settings and tool switches
+
+### S-030 Open a sidebar Settings window
+As the user, I open Settings (⌘, or the gear) and see a sidebar of pages grouped as Settings, Input, Capture, Windows, Tools, App, each with a small colored icon tile.
+Screens: settings-settings, settings-launcher, settings-screenshots
+Acceptance:
+- [snap] Sidebar groups and pages match the brief; the selected page shows a header with its icon, title and one-line description.
+- [snap] Each page is one grouped Form; no page scrolls when it fits.
+- [self] Settings reopens on the last page.
+Status: todo
+
+### S-031 See and grant permissions in one place
+As the user, I see Accessibility and Screen Recording with On/Off status and what each is for, and a button that opens the right System Settings pane.
+Screens: settings-settings
+Depends: S-030
+Acceptance:
+- [snap] Each permission row has an icon, name, one-line purpose, and an "On" badge or "Allow…" button.
+- [manual] Status updates within 2 seconds of granting in System Settings, without reopening the window.
+Status: todo
+
+### S-032 Turn a tool on or off
+As the user, I switch a tool off on its page and it disappears from the panel, its shortcut stops, and it uses no CPU.
+Screens: settings-launcher, settings-screenshots
+Depends: S-030
+Acceptance:
+- [self] A disabled tool has no registered shortcut, no status item and no running timers.
+- [snap] Each tool page starts with an "Enabled" switch and the tool's shortcut.
+Status: todo
+
+### S-033 Give a tool its own menu bar icon
+As the user, I turn on "Show in menu bar" for a tool and it gets its own icon that opens just that tool.
+Screens: settings-clipboard, settings-settings
+Depends: S-032
+Acceptance:
+- [manual] The icon keeps its position after relaunch (autosaveName).
+- [manual] Clicking it opens that tool alone; a Toolbelt icon still shows all tools.
+- [self] Turning it off removes the item.
+Status: todo
+
+### S-034 Order the tools in the menu bar panel
+As the user, I move tools up and down and switch them on or off in "Menu bar panel", and the Toolbelt panel shows them in that order.
+Screens: settings-settings
+Depends: S-032
+Acceptance:
+- [snap] Rows have icon, name, description, up/down buttons and a switch, like the reference.
+- [self] Order and switches survive relaunch.
+Status: todo
+
+### S-035 Show or hide Toolbelt in the Dock and menu bar
+As the user, I choose whether Toolbelt shows in the Dock and whether its main menu bar icon shows.
+Screens: settings-settings
+Depends: S-030
+Acceptance:
+- [manual] Show in Dock switches at once and Settings stays in front.
+- [manual] Hiding the main icon is refused with a note when no tool has its own icon and no shortcut is set.
+Status: todo
+
+## V2-M2 Screenshots
+
+### S-040 Capture an area
+As the user, I press ⇧⌘4-style shortcut (default ⌃⇧4), drag over the frozen screen, and the image is copied and saved.
+Screens: overlay-select, settings-screenshots
+Depends: S-031
+Acceptance:
+- [manual] The screen freezes, a crosshair and live size label follow the pointer; Escape cancels.
+- [unit] The saved PNG is at Retina pixel size of the selection.
+- [manual] The image is on the clipboard and in the save folder (default Desktop) named "Toolbelt <date> at <time>.png".
+Status: todo
+
+### S-041 Capture a window or the whole screen
+As the user, during selection I press Space to pick a window by hovering, or use the full-screen shortcut.
+Depends: S-040
+Acceptance:
+- [manual] Space toggles window mode with a highlight on the hovered window; click captures it with its shadow off by default.
+- [manual] The full-screen shortcut captures the display under the pointer.
+Status: todo
+
+### S-042 Act on a capture from the preview
+As the user, after a capture a small preview appears in a corner where I can copy, save, show in Finder, drag it out, or close it.
+Screens: capture-preview
+Depends: S-040
+Acceptance:
+- [snap] Preview shows the thumbnail and buttons; it hides after 6 seconds unless hovered.
+- [manual] Dragging the thumbnail into another app drops the image.
+Status: todo
+
+### S-043 Choose screenshot options
+As the user, I set the save folder, file format (PNG/JPEG/HEIC), copy-to-clipboard, show preview, and include cursor.
+Screens: settings-screenshots
+Depends: S-040
+Acceptance:
+- [snap] Options are on the Screenshots page.
+- [unit] File names and formats follow the options.
+Status: todo
+
+## V2-M3 Recording
+
+### S-050 Record an area, window or screen
+As the user, I start a recording from the shortcut or the Recording tool, pick an area, window or screen, and it records to MP4.
+Screens: overlay-select, settings-recording
+Depends: S-040
+Acceptance:
+- [manual] A 3-2-1 countdown, then recording; the selected area keeps a thin outline that is not in the video.
+- [manual] The file plays in QuickTime at the selection's pixel size.
+Status: todo
+
+### S-051 Stop a recording from the menu bar
+As the user, the menu bar shows a stop button with elapsed time while recording; clicking it or pressing the shortcut again stops and saves.
+Depends: S-050
+Acceptance:
+- [manual] The timer updates every second; stop saves within a second and shows the capture preview.
+Status: todo
+
+### S-052 Choose recording options
+As the user, I turn on system audio, microphone, show clicks and show cursor, and pick MP4 or MOV.
+Screens: settings-recording
+Depends: S-050
+Acceptance:
+- [manual] With microphone on, macOS asks for microphone access once; the file has audio.
+- [snap] Options are on the Recording page.
+Status: todo
+
+## V2-M4 Small tools
+
+### S-060 Pick a color from the screen
+As the user, I press the Colors shortcut, move a magnifier over the screen, and click to copy the color as hex.
+Screens: settings-colors
+Acceptance:
+- [manual] Click copies "#RRGGBB"; ⌥-click copies "rgb(r, g, b)"; Escape cancels. Uses NSColorSampler (no Screen Recording needed).
+- [snap] The Colors page lists the last 12 picked colors; clicking one copies it.
+Status: todo
+
+### S-061 Keep the Mac awake
+As the user, I turn on Keep Awake (indefinitely, 1 hour, or until a time) and the Mac does not sleep until it ends.
+Screens: settings-keep-awake
+Acceptance:
+- [unit] The power assertion is created on start and released on end or quit.
+- [manual] With its own menu bar icon, the icon fills while active.
+Status: todo
+
+### S-062 Snap the front window with a shortcut
+As the user, I press ⌃⌥ plus an arrow (or other keys) to move the front window to a half, third, maximize or center.
+Screens: settings-windows
+Acceptance:
+- [unit] Frame math for halves, thirds, maximize and center on a screen with a menu bar and Dock is correct.
+- [manual] Works in Safari, Finder and Xcode; asks for Accessibility when first used.
+Status: todo
+
 ## Later
 
 - Snippets: saved text with a keyword.
-- Window snapping: halves, thirds, full screen.
+- Markup editor, scrolling capture, OCR, GIF export (V2 research).
+- Window switcher, command palette, system stats.
 - Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.
 - Copied Finder files in clipboard history.
