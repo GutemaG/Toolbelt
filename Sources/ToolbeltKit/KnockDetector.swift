@@ -8,10 +8,18 @@ import Foundation
 /// out within about 100 ms. Typing, setting the laptop down and carrying it
 /// are slower, or come in bursts, and are left out. The approach follows
 /// mactap (MIT, github.com/jaskirat1616/mactap-app).
+///
+/// The side comes from the first sideways push: a knock on the right edge
+/// shoves the case one way along x before it rings. Only the first ~34 ms
+/// count, measured from how x sat just before the knock.
+public enum KnockSide: String, CaseIterable, Sendable {
+    case left, right
+}
+
 public struct KnockDetector: Sendable {
     public enum Event: Equatable, Sendable {
-        /// One to three knocks in a row.
-        case knocks(Int)
+        /// One to three knocks in a row, and the edge the first one hit.
+        case knocks(Int, KnockSide)
         case ignored(Reason)
     }
 
@@ -30,6 +38,10 @@ public struct KnockDetector: Sendable {
     public var sensitivity: Double
     /// The longest pause between knocks of one group, in seconds.
     public var gap: Double
+    /// Watch each knock a little longer to tell left from right.
+    public var findsSide = false
+    /// For a Mac whose sensor reads the sides the other way round.
+    public var invertSides = false
 
     /// The movement right now, without gravity, in g. For a live meter.
     public private(set) var level: Double = 0
@@ -47,6 +59,12 @@ public struct KnockDetector: Sendable {
     private var lockedUntil = -1.0
     /// After a slow jolt, nothing counts until the movement settles.
     private var waitForQuiet = false
+    private var side = KnockSide.left
+    /// The first sideways push of the knock being captured.
+    private var push = (baseline: 0.0, weighted: 0.0, weights: 0.0, peak: 0.0)
+    /// Sideways movement of the last 120 ms, for the baseline.
+    private var history = [(time: Double, x: Double)](repeating: (-1, 0), count: 96)
+    private var historyIndex = 0
 
     private let settle = 0.07      // after a knock, its ringing is not a second knock
     private let longest = 0.12     // a knock is over within this
@@ -67,7 +85,7 @@ public struct KnockDetector: Sendable {
         // The group ends when no knock follows within the gap.
         var finished: Event?
         if count > 0, time >= deadline {
-            finished = .knocks(count)
+            finished = .knocks(count, side)
             count = 0
         }
 
@@ -85,6 +103,8 @@ public struct KnockDetector: Sendable {
         averageTotal += (total - averageTotal) * 0.02
         let jump = abs(total - averageTotal)
         level = movement
+        history[historyIndex] = (time, dx)
+        historyIndex = (historyIndex + 1) % history.count
 
         // The background shake, learned from the quiet moments.
         if movement < floor * 0.9 { noise += (movement - noise) * 0.02 }
@@ -97,7 +117,8 @@ public struct KnockDetector: Sendable {
             current.peak = max(current.peak, movement)
             capture = current
             let length = time - current.start
-            if movement < current.peak * 0.35, length >= 0.006 {
+            if length <= 0.034 { addPush(dx, after: length) }
+            if movement < current.peak * 0.35, length >= (findsSide ? 0.034 : 0.006) {
                 return finish(time: time, peak: current.peak, typing: typing) ?? finished
             }
             if length > longest {
@@ -108,8 +129,39 @@ public struct KnockDetector: Sendable {
         } else if !waitForQuiet, time - lastKnock > settle, time >= lockedUntil, movement > threshold, jump > max(0.022, threshold * 0.65) {
             if typing { return finished ?? .ignored(.typing) }
             capture = (time, movement)
+            startPush(at: time)
+            addPush(dx, after: 0)
         }
         return finished
+    }
+
+    // MARK: Which side
+
+    /// How x sat 12 to 100 ms before the knock: what is left of gravity, not the knock.
+    private mutating func startPush(at time: Double) {
+        let before = history.filter { time - $0.time > 0.012 && time - $0.time < 0.1 }
+        push = (before.count >= 4 ? before.reduce(0) { $0 + $1.x } / Double(before.count) : 0, 0, 0, 0)
+    }
+
+    /// Early readings weigh most: the later ringing swings both ways.
+    private mutating func addPush(_ x: Double, after age: Double) {
+        let dx = x - push.baseline
+        let weight = exp(-age / 0.011)
+        push.weighted += dx * weight
+        push.weights += weight
+        if abs(dx) > abs(push.peak) { push.peak = dx }
+    }
+
+    /// Two votes, the weighted average and the strongest push; +x is right.
+    private var pushSide: KnockSide {
+        let sign = invertSides ? -1.0 : 1.0
+        let average = sign * (push.weights > 0 ? push.weighted / push.weights : 0)
+        let peak = sign * push.peak
+        var votes = 0
+        if abs(average) >= 0.0024 { votes += average > 0 ? 1 : -1 }
+        if abs(peak) >= 0.004 { votes += peak > 0 ? 1 : -1 }
+        if votes != 0 { return votes > 0 ? .right : .left }
+        return average >= 0 ? .right : .left
     }
 
     private mutating func finish(time: Double, peak: Double, typing: Bool) -> Event? {
@@ -124,6 +176,16 @@ public struct KnockDetector: Sendable {
             return .ignored(.burst)
         }
         lastKnock = time
+        let knockSide = pushSide
+        // A clear knock on the other edge ends the group and starts a new one.
+        if count > 0, findsSide, knockSide != side, abs(push.peak) > 0.008 {
+            let ended = Event.knocks(count, side)
+            count = 1
+            side = knockSide
+            deadline = time + gap
+            return ended
+        }
+        if count == 0 { side = knockSide }
         count += 1
         deadline = time + gap
         // Waits out the gap even after three, so a fourth turns it into drumming.

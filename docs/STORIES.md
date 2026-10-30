@@ -610,12 +610,25 @@ UX:
 - Power: reads only while Knock is on and the screen is awake; the meter updates only while its page shows
 Status: done
 
+### S-082 Knock on the left or right edge, with presets and rules per app
+As the user, I switch Knock to Left and Right so each edge has its own one, two and three knocks; I pick from more actions (copy, paste, cut, undo, save, accept, dismiss, tabs, music, windows), fill all slots from a preset, and give apps like Cursor, Claude or my terminal their own knocks.
+Acceptance:
+- [unit] A knock's first sideways push gives its side; left then right soon after makes two groups; presets fill three or six slots; an app rule wins only for the slots it sets.
+- [self] Every preset and suggested rule names real actions; a Cursor rule gives Accept on left 1 and leaves right 1 to the preset.
+- [snap] panel-knock shows the layout switch and preset menu; settings-knock shows layout, slots, Preset, Apps and suggestions.
+- [manual] On this MacBook: knocks near each edge of the palm rest read as that side (or do after Swap left and right); two knocks left pastes in TextEdit; a rule for Ghostty sends Return.
+UX:
+- Flow: Knock page or Settings > Knock -> Anywhere or Left and Right -> pick per slot, or Use a Preset -> Apps: Add a Rule for an App or Add a suggestion -> knock
+- Words: "Accept (Return)", "Dismiss (Escape)", "Same as Everywhere", "Swap left and right", "Suggested for Your Apps"
+- Permissions: key presses go through System Events (Automation, asked once), with Accessibility as the fallback
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
 - GIF export (V2 research). Scrolling capture that scrolls for you (needs Accessibility).
 - Window switcher, command palette. Fan control (needs a root helper).
-- Knock stage 2: left and right edges, more actions, per-app actions.
+- Knock: sounds on a knock, custom key shortcuts, Shortcuts app actions.
 - Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.
 - Copied Finder files in clipboard history.

@@ -38,5 +38,9 @@ Every word on screen comes from this table. Code names may differ
 | Volume Mixer | The tool with the output volume and a volume for each app playing sound | mixer, app volume, per-app volume |
 | Reset to Full Volume | Put an app back at 100% and stop playing it through Toolbelt | restore, default |
 | Knock | The tool that runs an action when you knock on the MacBook one, two or three times | tap, bonk, gesture |
+| Anywhere | Knock layout with three slots, wherever the knock lands | knock mode |
+| Left and Right | Knock layout with three slots for each edge | sides, edges |
+| Preset | A ready set of actions for every knock: Daily, Coding, Capture, Media, Focus | profile, template |
+| App rule | Knocks that do something else while one app is in front | per-app, override |
 | Sensitivity | How light a knock still counts, from Firm to Light | threshold, gain |
 | Copy All | Copy everything on the open Info tab as plain text | export, report |

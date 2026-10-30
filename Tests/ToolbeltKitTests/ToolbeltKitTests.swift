@@ -315,41 +315,47 @@ private struct Motion {
     var strength = 0.08
     var typingAt: [Double] = []
     var length = 2.0
+    /// The first sideways push of each knock: + is toward the left edge's side of the sensor, so it reads as right.
+    var pushes: [Double] = []
 
-    func run(sensitivity: Double = 0.6, bump: (start: Double, size: Double)? = nil) -> [KnockDetector.Event] {
+    func run(sensitivity: Double = 0.6, sides: Bool = false, bump: (start: Double, size: Double)? = nil) -> [KnockDetector.Event] {
         var detector = KnockDetector(sensitivity: sensitivity)
+        detector.findsSide = sides
         var events: [KnockDetector.Event] = []
         var seed: UInt64 = 7
         for index in 0..<Int(length * 800) {
             let t = Double(index) / 800
             seed = seed &* 6364136223846793005 &+ 1442695040888963407
             var z = -1 + (Double(seed >> 40) / Double(1 << 24) - 0.5) * 0.004
-            for start in knocks where t >= start && t < start + 0.06 {
+            var x = 0.0
+            for (index, start) in knocks.enumerated() where t >= start && t < start + 0.06 {
                 let age = t - start
-                z += strength * exp(-age / 0.008) * cos(2 * .pi * 150 * age)
+                let ring = strength * exp(-age / 0.008) * cos(2 * .pi * 150 * age)
+                z += ring
+                if pushes.indices.contains(index) { x += pushes[index] * ring }
             }
             if let bump, t >= bump.start, t < bump.start + 0.3 { z += bump.size * sin(.pi * (t - bump.start) / 0.3) }
             let typing = typingAt.contains { t >= $0 && t < $0 + 0.5 }
-            if let event = detector.add(time: t, x: 0, y: 0, z: z, typing: typing) { events.append(event) }
+            if let event = detector.add(time: t, x: x, y: 0, z: z, typing: typing) { events.append(event) }
         }
         return events
     }
 }
 
 @Test func knockCounts() {
-    #expect(Motion(knocks: [0.5]).run().filter { $0 != .ignored(.weak) } == [.knocks(1)])
-    #expect(Motion(knocks: [0.5, 0.75]).run().contains(.knocks(2)))
-    #expect(Motion(knocks: [0.5, 0.7, 0.9]).run().contains(.knocks(3)))
-    #expect(Motion(knocks: [0.5]).run().contains(.knocks(1)) && !Motion(knocks: [0.5, 1.5]).run().contains(.knocks(2)))
+    #expect(Motion(knocks: [0.5]).run().filter { $0 != .ignored(.weak) }.map(\.count) == [1])
+    #expect(Motion(knocks: [0.5, 0.75]).run().map(\.count).contains(2))
+    #expect(Motion(knocks: [0.5, 0.7, 0.9]).run().map(\.count).contains(3))
+    #expect(!Motion(knocks: [0.5, 1.5]).run().map(\.count).contains(2))
 }
 
 @Test func knockIgnoresWhatIsNotAKnock() {
     #expect(Motion().run().isEmpty)
-    #expect(!Motion(knocks: [0.6], typingAt: [0.3]).run().contains { if case .knocks = $0 { true } else { false } })
-    #expect(!Motion().run(bump: (0.5, 0.2)).contains { if case .knocks = $0 { true } else { false } })
+    #expect(Motion(knocks: [0.6], typingAt: [0.3]).run().compactMap(\.count).isEmpty)
+    #expect(Motion().run(bump: (0.5, 0.2)).compactMap(\.count).isEmpty)
     let drumming = Motion(knocks: [0.5, 0.6, 0.7, 0.8, 0.9]).run()
-    #expect(drumming.contains(.ignored(.burst)) && !drumming.contains { if case .knocks = $0 { true } else { false } })
-    #expect(!Motion(knocks: [0.5], strength: 0.015).run(sensitivity: 0).contains(.knocks(1)))
+    #expect(drumming.contains(.ignored(.burst)) && drumming.compactMap(\.count).isEmpty)
+    #expect(!Motion(knocks: [0.5], strength: 0.015).run(sensitivity: 0).map(\.count).contains(1))
 }
 
 @Test func knockIgnoresTiltingTheLaptop() {
@@ -358,7 +364,38 @@ private struct Motion {
     for index in 0..<(6 * 800) {
         let t = Double(index) / 800
         let tilt = min(max(t - 1, 0) / 0.5, 1) * 0.3 // tipped back over half a second, then left there
-        if case .knocks? = detector.add(time: t, x: tilt, y: 0, z: -(1 - tilt * tilt).squareRoot(), typing: false) { knocks += 1 }
+        if detector.add(time: t, x: tilt, y: 0, z: -(1 - tilt * tilt).squareRoot(), typing: false)?.count != nil { knocks += 1 }
     }
     #expect(knocks == 0)
+}
+
+private extension KnockDetector.Event {
+    var count: Int? { if case .knocks(let count, _) = self { count } else { nil } }
+    var side: KnockSide? { if case .knocks(_, let side) = self { side } else { nil } }
+}
+
+@Test func knockSides() {
+    #expect(Motion(knocks: [0.5], pushes: [0.5]).run(sides: true).compactMap(\.side) == [.right])
+    #expect(Motion(knocks: [0.5], pushes: [-0.5]).run(sides: true).compactMap(\.side) == [.left])
+    #expect(Motion(knocks: [0.5, 0.75], pushes: [-0.5, -0.5]).run(sides: true).compactMap(\.count) == [2])
+    // Left, then right soon after: two groups, not one of two.
+    let split = Motion(knocks: [0.5, 0.75], pushes: [-0.5, 0.5]).run(sides: true)
+    #expect(split.compactMap(\.side) == [.left, .right] && split.compactMap(\.count) == [1, 1])
+    var inverted = KnockDetector()
+    inverted.findsSide = true
+    inverted.invertSides = true
+    #expect(inverted.invertSides)
+}
+
+@Test func knockRules() {
+    let preset = KnockPreset.all.first { $0.id == "daily" }!
+    let sides = preset.slots(for: .sides)
+    #expect(sides.count == 6 && sides["left.2"] == "paste" && sides["right.1"] == "playPause")
+    #expect(preset.slots(for: .anywhere) == ["any.1": "copy", "any.2": "paste", "any.3": "undo"])
+    let rule = KnockAppRule(id: "com.example", name: "Example", slots: ["left.1": "accept"])
+    #expect(KnockRules.action(for: KnockSlot(count: 1, side: .left), slots: sides, rule: rule) == "accept")
+    #expect(KnockRules.action(for: KnockSlot(count: 1, side: .right), slots: sides, rule: rule) == "playPause")
+    #expect(KnockRules.slot(count: 2, side: .right, layout: .anywhere).key == "any.2")
+    #expect(KnockRules.slot(count: 3, side: .right, layout: .sides).title == "3 knocks, right")
+    #expect(Set(KnockAppRule.suggested.map(\.rule.id)).count == KnockAppRule.suggested.count)
 }

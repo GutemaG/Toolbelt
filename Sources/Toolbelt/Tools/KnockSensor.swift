@@ -58,6 +58,16 @@ nonisolated final class KnockSensor: @unchecked Sendable {
         set { lock.withLock { detector.sensitivity = newValue } }
     }
 
+    var findsSide: Bool {
+        get { lock.withLock { detector.findsSide } }
+        set { lock.withLock { detector.findsSide = newValue } }
+    }
+
+    var invertSides: Bool {
+        get { lock.withLock { detector.invertSides } }
+        set { lock.withLock { detector.invertSides = newValue } }
+    }
+
     /// The meter's values; the peak starts again after each look.
     func take() -> Reading {
         lock.withLock {

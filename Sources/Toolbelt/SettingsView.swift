@@ -682,21 +682,44 @@ private struct CameraOptions: View {
 /// Settings > Knock.
 private struct KnockOptions: View {
     @AppStorage(Knock.messageKey) private var message = true
+    @Bindable private var knock = Knock.shared
 
     var body: some View {
         Section {
-            ForEach(1...3, id: \.self) { count in
-                LabeledContent(count == 1 ? "1 knock" : "\(count) knocks") {
-                    KnockActionPicker(count: count)
+            Picker("Where you knock", selection: $knock.layout) {
+                ForEach(KnockLayout.allCases, id: \.self) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            ForEach(knock.layout.slots, id: \.self) { slot in
+                LabeledContent(slot.title) {
+                    KnockActionPicker(slot: slot)
                 }
+            }
+            LabeledContent("Preset") {
+                KnockPresetMenu()
             }
         } header: {
             Text("Knocks")
+        } footer: {
+            Text(knock.layout == .sides
+                 ? "Knock near the left or right edge of the palm rest or the case. Knocks in the middle may read as either side."
+                 : "Knocks count the same wherever they land: the palm rest, the lid, or the desk beside the Mac.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
+        KnockAppRules()
         Section {
             LabeledContent("Sensitivity") {
                 KnockSensitivitySlider()
                     .frame(width: 220)
+            }
+            if knock.layout == .sides {
+                Toggle(isOn: $knock.invertSides) {
+                    Text("Swap left and right")
+                    Text("Turn on if knocks on the left edge read as right.")
+                }
+                .toggleStyle(.switch)
+                .controlSize(.mini)
             }
             Toggle(isOn: $message) {
                 Text("Show what each knock did")
@@ -707,7 +730,7 @@ private struct KnockOptions: View {
         } header: {
             Text("Options")
         } footer: {
-            Text("Knock reads the motion sensor in the MacBook, about 800 times a second, only while Knock is on and the screen is awake. Knocks while you type are ignored. Play, Next Track and Lock Screen need Accessibility. The sensor is not a public part of macOS, so an update may stop it working. Based on the open-source mactap app.")
+            Text("Knock reads the motion sensor in the MacBook, about 800 times a second, only while Knock is on and the screen is awake. Knocks while you type are ignored. Copy, paste and the other key presses ask once to control System Events; music keys and Lock Screen need Accessibility. The sensor is not a public part of macOS, so an update may stop it working. Based on the open-source mactap app.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

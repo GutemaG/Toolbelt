@@ -258,6 +258,20 @@ enum SelfTest {
                 print("SKIP knock: this Mac has no motion sensor")
             }
             check("test runs never listen for knocks", Knock.shared.isSimulated && Knock.shared.state == .off)
+            let knownActions = Set(KnockAction.allCases.map(\.rawValue))
+            check("every preset and suggested rule uses real actions",
+                  KnockPreset.all.allSatisfy { ($0.left + $0.right).allSatisfy(knownActions.contains) }
+                      && KnockAppRule.suggested.allSatisfy { $0.rule.slots.values.allSatisfy(knownActions.contains) })
+            let knock = Knock.shared
+            knock.layout = .sides
+            knock.apply(KnockPreset.all[1])
+            let cursor = KnockAppRule.suggested[0].rule
+            knock.addRule(cursor)
+            let leftOne = KnockSlot(count: 1, side: .left), rightOne = KnockSlot(count: 1, side: .right)
+            check("an app rule wins over the everywhere knock, only where it sets one",
+                  knock.action(for: leftOne, rule: cursor) == .accept && knock.action(for: rightOne, rule: cursor) == .copy && knock.currentPreset?.id == "coding")
+            knock.removeRule(cursor)
+            knock.layout = .anywhere
 
             // S-078 Info: every tab reads, offline (no public IP lookup)
             let offline = InfoReader.Options(locationAllowed: false, lookUpPublicIP: false)

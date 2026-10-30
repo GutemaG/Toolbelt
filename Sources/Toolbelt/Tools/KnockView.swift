@@ -1,33 +1,62 @@
 import SwiftUI
 import ToolbeltKit
 
-/// The Knock page: whether it listens, a live meter for tuning, the last
-/// knock heard, and what one, two and three knocks do.
+/// The Knock page: whether it listens, the layout and what each knock does,
+/// a live meter for tuning, and the last knock heard.
 struct KnockView: View {
     let surface: Surface
     let window: NSWindow?
     @State private var reading = KnockSensor.Reading()
-    private var knock: Knock { .shared }
+    @Bindable private var knock = Knock.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.lg) {
                 status
                 if knock.state == .listening || knock.isSimulated {
-                    card("Knocks") {
-                        ForEach(1...3, id: \.self) { count in
-                            if count > 1 { Divider().padding(.leading, Space.md) }
-                            row(count == 1 ? "1 knock" : "\(count) knocks") {
-                                KnockActionPicker(count: count)
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        HStack(spacing: Space.sm) {
+                            Picker("Layout", selection: $knock.layout) {
+                                ForEach(KnockLayout.allCases, id: \.self) { Text($0.title).tag($0) }
+                            }
+                            .pickerStyle(.segmented)
+                            .labelsHidden()
+                            .fixedSize()
+                            .help("Anywhere: three knocks. Left and Right: each edge has its own three.")
+                            Spacer(minLength: 0)
+                            KnockPresetMenu()
+                        }
+                        .controlSize(.small)
+                        .padding(.horizontal, Space.sm)
+                        card {
+                            ForEach(Array(knock.layout.slots.enumerated()), id: \.element) { index, slot in
+                                if index > 0 { Divider().padding(.leading, Space.md) }
+                                row(slot.title) { KnockActionPicker(slot: slot) }
                             }
                         }
                     }
-                    card("Tuning") {
-                        meter
-                        Divider().padding(.leading, Space.md)
-                        row("Sensitivity") {
-                            KnockSensitivitySlider()
-                                .frame(width: 200)
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        Text("Tuning")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, Space.sm)
+                            .accessibilityAddTraits(.isHeader)
+                        card {
+                            meter
+                            Divider().padding(.leading, Space.md)
+                            row("Sensitivity") {
+                                KnockSensitivitySlider()
+                                    .frame(width: 200)
+                            }
+                            if knock.layout == .sides {
+                                Divider().padding(.leading, Space.md)
+                                row("Swap left and right") {
+                                    Toggle("Swap left and right", isOn: $knock.invertSides)
+                                        .labelsHidden()
+                                        .toggleStyle(.switch)
+                                        .help("Turn on if knocks on the left read as right")
+                                }
+                            }
                         }
                     }
                 }
@@ -80,8 +109,10 @@ struct KnockView: View {
     }
 
     private var lastHeard: String {
-        guard let heard = knock.heard else { return "Knock on the palm rest, the lid, or the desk beside the Mac." }
-        return Knock.describe(heard.event, action: heard.action) + " · " + heard.at.formatted(.relative(presentation: .named))
+        guard let heard = knock.heard else {
+            return knock.layout == .sides ? "Knock near the left or right edge of the palm rest." : "Knock on the palm rest, the lid, or the desk beside the Mac."
+        }
+        return knock.describe(heard.event, action: heard.action, app: heard.app) + " · " + heard.at.formatted(.relative(presentation: .named))
     }
 
     /// The movement's peak against the line a knock must cross, drawn at the middle.
@@ -102,16 +133,9 @@ struct KnockView: View {
         }
     }
 
-    private func card<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
-            Text(title)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, Space.sm)
-                .accessibilityAddTraits(.isHeader)
-            VStack(spacing: 0, content: content)
-                .background(.fill.quinary, in: .rect(cornerRadius: 8))
-        }
+    private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+        VStack(spacing: 0, content: content)
+            .background(.fill.quinary, in: .rect(cornerRadius: 8))
     }
 
     private func row<Trailing: View>(_ label: String, @ViewBuilder trailing: () -> Trailing) -> some View {
@@ -126,20 +150,51 @@ struct KnockView: View {
     }
 }
 
-/// What a number of knocks does. Used on the Knock page and in Settings.
-struct KnockActionPicker: View {
-    let count: Int
-    var label = ""
-
+/// The actions, grouped, for a knock menu.
+struct KnockActionItems: View {
     var body: some View {
-        Picker(label, selection: Binding(get: { Knock.shared.action(for: count) }, set: { Knock.shared.setAction($0, for: count) })) {
-            ForEach(KnockAction.allCases) { action in
-                Label(action.title, systemImage: action.symbol).tag(action)
-                if action == .nothing { Divider() }
+        Label(KnockAction.nothing.title, systemImage: KnockAction.nothing.symbol).tag(KnockAction?.some(.nothing))
+        ForEach(KnockAction.Group.allCases, id: \.self) { group in
+            Section(group.rawValue) {
+                ForEach(KnockAction.allCases.filter { $0.group == group }) { action in
+                    Label(action.title, systemImage: action.symbol).tag(KnockAction?.some(action))
+                }
             }
         }
-        .labelsHidden(label.isEmpty)
+    }
+}
+
+/// What a slot does everywhere. Used on the Knock page and in Settings.
+struct KnockActionPicker: View {
+    let slot: KnockSlot
+
+    var body: some View {
+        Picker(slot.title, selection: Binding<KnockAction?>(get: { Knock.shared.action(for: slot) },
+                                                            set: { Knock.shared.setAction($0 ?? .nothing, for: slot) })) {
+            KnockActionItems()
+        }
+        .labelsHidden()
         .fixedSize()
+    }
+}
+
+/// Fills every slot of the layout from a preset.
+struct KnockPresetMenu: View {
+    var body: some View {
+        Menu {
+            ForEach(KnockPreset.all) { preset in
+                Button {
+                    Knock.shared.apply(preset)
+                } label: {
+                    Label(preset.title, systemImage: preset.symbol)
+                    Text(preset.subtitle)
+                }
+            }
+        } label: {
+            Text(Knock.shared.currentPreset.map { "Preset: \($0.title)" } ?? "Use a Preset")
+        }
+        .fixedSize()
+        .help("Set every knock at once from a ready-made set")
     }
 }
 
@@ -157,9 +212,90 @@ struct KnockSensitivitySlider: View {
     }
 }
 
-private extension View {
-    @ViewBuilder
-    func labelsHidden(_ hidden: Bool) -> some View {
-        if hidden { labelsHidden() } else { self }
+/// Settings > Knock > Apps: rules that change some knocks in one app.
+struct KnockAppRules: View {
+    private var knock: Knock { .shared }
+
+    var body: some View {
+        Section {
+            ForEach(knock.rules) { rule in
+                DisclosureGroup {
+                    ForEach(knock.layout.slots, id: \.self) { slot in
+                        Picker(slot.title, selection: Binding<KnockAction?>(get: { knock.ruleAction(rule, slot) },
+                                                                            set: { knock.setRuleAction($0, for: slot, in: rule) })) {
+                            Text("Same as Everywhere (\(knock.action(for: slot).title))").tag(KnockAction?.none)
+                            Divider()
+                            KnockActionItems()
+                        }
+                    }
+                    Button("Remove Rule", role: .destructive) { knock.removeRule(rule) }
+                } label: {
+                    AppLabel(id: rule.id, name: rule.name, detail: summary(rule))
+                }
+            }
+            Menu("Add a Rule for an App") {
+                ForEach(runningApps, id: \.id) { app in
+                    Button(app.name) { knock.addRule(KnockAppRule(id: app.id, name: app.name, slots: [:])) }
+                }
+            }
+            .fixedSize()
+            .disabled(runningApps.isEmpty)
+        } header: {
+            Text("Apps")
+        } footer: {
+            Text("In an app with a rule, its knocks win while that app is in front. Knocks it leaves alone do what they do everywhere.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        if !knock.suggestions.isEmpty {
+            Section("Suggested for Your Apps") {
+                ForEach(knock.suggestions, id: \.rule.id) { suggestion in
+                    HStack(spacing: Space.md) {
+                        AppLabel(id: suggestion.rule.id, name: suggestion.rule.name, detail: suggestion.why)
+                        Spacer(minLength: Space.md)
+                        Button("Add") { knock.addRule(suggestion.rule) }
+                            .help("Add the suggested rule for \(suggestion.rule.name)")
+                    }
+                }
+            }
+        }
+    }
+
+    private func summary(_ rule: KnockAppRule) -> String {
+        let set = knock.layout.slots.compactMap { slot in knock.ruleAction(rule, slot).map { "\(slot.title): \($0.title)" } }
+        return set.isEmpty ? "No changes yet" : set.joined(separator: " · ")
+    }
+
+    /// Apps open now that have no rule yet.
+    private var runningApps: [(id: String, name: String)] {
+        NSWorkspace.shared.runningApplications
+            .filter { $0.activationPolicy == .regular && $0.bundleIdentifier != Bundle.main.bundleIdentifier }
+            .compactMap { app in app.bundleIdentifier.map { ($0, app.localizedName ?? $0) } }
+            .filter { app in !knock.rules.contains { $0.id == app.id } }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+    }
+}
+
+/// An app's icon, name and one line under it.
+private struct AppLabel: View {
+    let id: String
+    let name: String
+    let detail: String
+
+    var body: some View {
+        HStack(spacing: Space.md) {
+            if let url = NSWorkspace.shared.urlForApplication(withBundleIdentifier: id) {
+                Image(nsImage: NSWorkspace.shared.icon(forFile: url.path))
+                    .resizable()
+                    .frame(width: Space.xl, height: Space.xl)
+            }
+            VStack(alignment: .leading, spacing: 0) {
+                Text(name)
+                Text(detail)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
     }
 }
