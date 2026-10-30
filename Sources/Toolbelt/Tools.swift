@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, keepAwake
 
     var id: String { rawValue }
 
@@ -20,6 +20,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .timer: "Timer"
         case .sound: "Sound"
         case .toggles: "Toggles"
+        case .system: "System"
         case .keepAwake: "Keep Awake"
         }
     }
@@ -36,6 +37,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .timer: "timer"
         case .sound: "speaker.wave.2"
         case .toggles: "switch.2"
+        case .system: "gauge.with.dots.needle.50percent"
         case .keepAwake: "cup.and.saucer"
         }
     }
@@ -53,6 +55,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .timer: "Count down, with the time left in the menu bar."
         case .sound: "Switch between speakers, headphones and AirPods."
         case .toggles: "Dark Mode, desktop icons, hidden files, lock and more."
+        case .system: "CPU, memory, temperature, fans, and the apps using the most energy."
         case .keepAwake: "Stop the Mac from sleeping for a while."
         }
     }
@@ -70,6 +73,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .timer: .green
         case .sound: .cyan
         case .toggles: .gray
+        case .system: .pink
         case .keepAwake: .brown
         }
     }
@@ -86,6 +90,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .timer: "Start a timer"
         case .sound: "Choose the sound output"
         case .toggles: "Flip a system switch"
+        case .system: "See CPU and energy use"
         case .keepAwake: "Keep the Mac awake"
         }
     }

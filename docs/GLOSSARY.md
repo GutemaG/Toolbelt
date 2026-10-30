@@ -27,3 +27,6 @@ Every word on screen comes from this table. Code names may differ
 | Pause Recording / Resume Recording | Stop or start saving new copies to clipboard history | disable, mute, stop |
 | Source app | The app a clip was copied from, shown as its icon | origin, owner |
 | Settings | Toolbelt's settings window (Command-,) | Preferences, options |
+| System | The tool that shows CPU, memory, temperature, fans, battery and the apps using the most energy | Stats, Activity, Monitor |
+| Energy | What an app and its helpers drew over the last few seconds, in mW or W | power, impact |
+| Bring to Front | Switch to a running app from System's list | open, focus, activate |

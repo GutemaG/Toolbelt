@@ -167,3 +167,36 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(SnippetRules.score(query: "main st", title: "Home address", keyword: "", text: "1 Main St") == 1)
     #expect(SnippetRules.score(query: "zebra", title: "Home address", keyword: "", text: "1 Main St") == nil)
 }
+
+@Test func systemGroupsHelpersUnderTheirApp() {
+    #expect(SystemRules.appBundle(forExecutable: "/Applications/Google Chrome.app/Contents/Frameworks/Helper.app/Contents/MacOS/Helper") == "/Applications/Google Chrome.app")
+    #expect(SystemRules.appBundle(forExecutable: "/usr/bin/qemu") == nil)
+    let apps = SystemRules.group([
+        ProcessUse(path: "/Applications/A.app/Contents/MacOS/A", watts: 0.1, cpu: 5),
+        ProcessUse(path: "/Applications/A.app/Contents/Helpers/H.app/Contents/MacOS/H", watts: 0.2, cpu: 10),
+        ProcessUse(path: "/usr/local/bin/tool", watts: 0.25, cpu: 1),
+    ])
+    #expect(apps.map(\.path) == ["/Applications/A.app", "/usr/local/bin/tool"])
+    #expect(abs(apps[0].watts - 0.3) < 0.0001 && apps[0].cpu == 15)
+    #expect(apps[0].isApp && !apps[1].isApp)
+}
+
+@Test func systemAveragesSamples() {
+    let a = [AppUse(path: "/A.app", watts: 1, cpu: 10)]
+    let b = [AppUse(path: "/A.app", watts: 3, cpu: 30), AppUse(path: "/B.app", watts: 2, cpu: 0)]
+    let average = SystemRules.average([a, b])
+    #expect(average.map(\.path) == ["/A.app", "/B.app"])
+    #expect(average[0].watts == 2 && average[0].cpu == 20 && average[1].watts == 1)
+}
+
+@Test func systemNumbers() {
+    #expect(SystemRules.cpuLoad(busyBefore: 10, totalBefore: 100, busyAfter: 30, totalAfter: 200) == 0.2)
+    #expect(SystemRules.cpuLoad(busyBefore: 10, totalBefore: 100, busyAfter: 10, totalAfter: 100) == nil)
+    #expect(SystemRules.memoryUsed(internalPages: 10, purgeablePages: 2, wiredPages: 3, compressedPages: 1, pageSize: 4) == 48)
+    #expect(SystemRules.chipTemperature([("PMU tdie1", 40), ("PMU tdie2", 42), ("PMU tdev1", -9200), ("NAND", 30)]) == 41)
+    #expect(SystemRules.chipTemperature([("PMU tdev1", -9200)]) == nil)
+    #expect(SystemRules.powerText(0.032) == "32 mW")
+    #expect(SystemRules.powerText(1.44) == "1.4 W")
+    #expect(SystemRules.percentText(0.094) == "9%")
+    #expect(SystemRules.memoryText(used: 13_207_024_435, total: 25_769_803_776) == "12.3 of 24 GB")
+}

@@ -528,11 +528,24 @@ Status: done
 As the user, I record, clear or reset any Toolbelt shortcut on its tool's Settings page, and see a warning when two collide.
 Status: done
 
+### S-076 See CPU use and the apps using the most energy
+As the user, I open System and see CPU load, memory, chip temperature, fans and battery, with the apps using the most energy below; I bring one to the front, quit it, or force quit it.
+Acceptance:
+- [unit] Helpers count toward their app; energy is averaged over three readings.
+- [self] CPU is 0–100%, memory is below the total, apps are listed with helpers grouped.
+- [snap] panel-system shows the gauge rows and "Using the Most Energy".
+- [manual] Right-click > Quit quits the app; Force Quit… asks first.
+UX:
+- Flow: tool picker or ⌘N in the panel -> gauges and list fill within a second -> ↩ brings an app to the front, right-click to quit
+- Surface: the shared panel and popover (a tool kept open beside the work); Force Quit uses an alert (destroys unsaved work)
+- Words: "System", "Using the Most Energy", "Bring to Front", "Force Quit…", "Show CPU use next to the menu bar icon"
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
 - Markup editor, scrolling capture, OCR, GIF export (V2 research).
-- Window switcher, command palette, system stats.
+- Window switcher, command palette. Fan control (needs a root helper).
 - Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.
 - Copied Finder files in clipboard history.

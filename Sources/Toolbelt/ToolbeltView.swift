@@ -39,6 +39,10 @@ struct ToolbeltView: View {
                 .zIndex(1) // the tool name label under a hovered icon floats over the list
             Divider()
             quickActions
+            if tool == .system {
+                SystemGauges(window: window)
+                Divider()
+            }
             results
             Divider()
             footer
@@ -255,6 +259,8 @@ struct ToolbeltView: View {
                     .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
                     .help(String(snippet.text.prefix(500)))
                 Spacer(minLength: 0)
+            case .usage(let use):
+                UsageRow(use: use, icon: model.apps.icon(for: use.path), selected: selected)
             case .add, .action:
                 EmptyView()
             }
@@ -268,7 +274,7 @@ struct ToolbeltView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityAction(named: entry.isApp ? "Open" : (surface == .panel ? "Paste" : "Copy")) {
+        .accessibilityAction(named: entry.isApp ? "Open" : entry.isUsage ? "Bring to Front" : (surface == .panel ? "Paste" : "Copy")) {
             activate(entry, plainText: false)
         }
     }
@@ -384,6 +390,16 @@ struct ToolbeltView: View {
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([capture.url]) }
             Divider()
             Button("Move to Trash", role: .destructive) { CaptureController.shared.delete(capture) }
+        case .usage(let use):
+            let monitor = SystemMonitor.shared
+            if use.isApp {
+                Button("Bring to Front") { activate(entry, plainText: false) }
+                Button("Quit") { monitor.quit(use) }
+                Button("Force Quit…") { close(); monitor.forceQuit(use, name: UsageRow.name(of: use)) }
+                Divider()
+            }
+            Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: use.path)]) }
+            Button("Open Activity Monitor") { close(); monitor.openActivityMonitor() }
         }
     }
 
@@ -441,6 +457,8 @@ struct ToolbeltView: View {
         /// A recently picked color, "#RRGGBB".
         case color(String)
         case snippet(Snippet)
+        /// An app in System's energy list.
+        case usage(AppUse)
 
         var id: String {
             switch self {
@@ -451,10 +469,12 @@ struct ToolbeltView: View {
             case .color(let hex): "k:" + hex
             case .snippet(let snippet): "s:" + snippet.uuid.uuidString
             case .capture(let capture): "f:" + capture.uuid.uuidString
+            case .usage(let use): "u:" + use.path
             }
         }
 
         var isApp: Bool { if case .app = self { true } else { false } }
+        var isUsage: Bool { if case .usage = self { true } else { false } }
     }
 
     struct Section {
@@ -527,6 +547,9 @@ struct ToolbeltView: View {
             case .snippets:
                 let found = model.searchSnippets(snippets, query: query)
                 if !found.isEmpty { result.append(Section(title: query.isEmpty ? "All Snippets" : nil, entries: found.map(Entry.snippet))) }
+            case .system:
+                let top = SystemMonitor.shared.apps.filter { query.isEmpty || ClipRules.matches(query, text: UsageRow.name(of: $0)) }
+                if !top.isEmpty { result.append(Section(title: query.isEmpty ? "Using the Most Energy" : nil, entries: top.map(Entry.usage))) }
             case .colors:
                 let recent = model.recentColors.filter { query.isEmpty || ClipRules.matches(query, text: $0) }
                 if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.color))) }
@@ -583,6 +606,9 @@ struct ToolbeltView: View {
         case .capture(let capture):
             close()
             NSWorkspace.shared.open(capture.url)
+        case .usage(let use):
+            close()
+            SystemMonitor.shared.bringToFront(use)
         case .add:
             query = ""
             selected = 0

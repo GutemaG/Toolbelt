@@ -195,6 +195,18 @@ enum SelfTest {
             check("sound output devices are listed", !outputs.isEmpty, "\(outputs.map(\.name))")
             check("the current output is one of them", outputs.contains { $0.id == AudioOutput.current })
 
+            // S-076 System: read only, nothing is quit
+            let sensors = SystemSensors()
+            _ = await sensors.read(processes: true)
+            try? await Task.sleep(for: .seconds(1))
+            let reading = await sensors.read(processes: true)
+            check("CPU load is between 0 and 100%", reading.cpu.map { (0...1).contains($0) } ?? false, "\(reading.cpu ?? -1)")
+            check("memory in use is below the total", reading.memoryUsed > 0 && reading.memoryUsed <= reading.memoryTotal)
+            check("the chip temperature is believable", reading.temperature.map { (10...120).contains($0) } ?? true, "\(reading.temperature ?? -1)")
+            let apps = reading.apps ?? []
+            check("apps using energy are listed, helpers grouped", !apps.isEmpty && !apps.contains { $0.path.contains(".app/") },
+                  apps.prefix(3).map { "\($0.path.split(separator: "/").last ?? "") \(SystemRules.powerText($0.watts))" }.joined(separator: ", "))
+
             // S-072 toggles: the scripts compile; nothing on this Mac is switched
             for script in [QuickToggles.darkModeScript, QuickToggles.emptyTrashScript] {
                 var error: NSDictionary?

@@ -60,6 +60,7 @@ struct SettingsView: View {
             case .timer: ToolSettings(tool: .timer)
             case .sound: ToolSettings(tool: .sound)
             case .toggles: ToolSettings(tool: .toggles)
+            case .system: ToolSettings(tool: .system)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -89,7 +90,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, windows, timer, sound, toggles, system, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -101,7 +102,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors: .capture
         case .windows: .windows
-        case .timer, .sound, .toggles, .keepAwake: .tools
+        case .timer, .sound, .toggles, .system, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -400,6 +401,8 @@ struct ToolSettings: View {
             WindowOptions()
         case .keepAwake:
             KeepAwakeOptions()
+        case .system:
+            SystemOptions()
         case .toggles:
             Section {
             } footer: {
@@ -625,6 +628,30 @@ private struct KeepAwakeOptions: View {
             Text("Options")
         } footer: {
             Text("Give Keep Awake its own menu bar icon to see at a glance when it is on.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+    }
+}
+
+/// Settings > System.
+private struct SystemOptions: View {
+    @AppStorage(SystemMonitor.menuBarKey) private var menuBarCPU = true
+
+    var body: some View {
+        Section {
+            Toggle(isOn: $menuBarCPU) {
+                Text("Show CPU use next to the menu bar icon")
+                Text("Shows the load beside System’s own icon, read every two seconds.")
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .disabled(!ToolPrefs.shared.ownIcon.contains(.system))
+            .onChange(of: menuBarCPU) { ToolPrefs.shared.onChange?() }
+        } header: {
+            Text("Options")
+        } footer: {
+            Text("Energy is what each app and its helpers used over the last few seconds, like the Energy tab in Activity Monitor. Apps from other users and the system are left out. Nothing here needs a permission.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

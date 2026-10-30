@@ -37,7 +37,8 @@ enum Snapshot {
                 NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                 for tool in Tool.allCases where only?.contains(tool.rawValue) ?? true {
                     PanelController.shared.show(tool)
-                    try? await Task.sleep(for: .seconds(0.8))
+                    // System needs two readings before its energy list fills.
+                    try? await Task.sleep(for: .seconds(tool == .system ? 2.5 : 0.8))
                     capture(to: "\(dir)/panel-\(tool.rawValue)-\(mode).png", window: PanelController.shared.panel)
                 }
             }

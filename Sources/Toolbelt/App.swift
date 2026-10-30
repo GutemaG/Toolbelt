@@ -67,6 +67,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if prefs.enabled.contains(.clipboard) { model.clipboard.start() } else { model.clipboard.stop() }
         if !prefs.enabled.contains(.keepAwake), KeepAwake.shared.isOn { KeepAwake.shared.stop() }
         if !prefs.enabled.contains(.recording), Recorder.shared.isRecording { Recorder.shared.stop() }
+        SystemMonitor.shared.menuBar = prefs.enabled.contains(.system) && prefs.ownIcon.contains(.system)
+            && UserDefaults.standard.object(forKey: SystemMonitor.menuBarKey) as? Bool ?? true
         if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
 
         let policy: NSApplication.ActivationPolicy = prefs.showInDock ? .regular : .accessory
@@ -141,6 +143,7 @@ final class StatusItems {
         } else {
             main?.setTitle(text)
         }
+        tools[.system]?.setTitle(SystemMonitor.shared.menuBarText)
     }
 
     /// Shows the Toolbelt popover, or the first tool icon when it is hidden.
