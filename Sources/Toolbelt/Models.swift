@@ -36,6 +36,9 @@ final class AppLaunch {
     var path: String = ""
     var count: Int = 0
     var lastLaunched: Date?
+    /// Pinned apps show as a grid at the top of the Launcher, in pinOrder.
+    var isPinned: Bool = false
+    var pinOrder: Int = 0
 
     init(path: String) {
         self.path = path
@@ -114,15 +117,67 @@ final class AppModel {
     }
 
     func recordLaunch(path: String) {
-        var descriptor = FetchDescriptor<AppLaunch>(predicate: #Predicate { $0.path == path })
-        descriptor.fetchLimit = 1
-        let launch = (try? context.fetch(descriptor).first) ?? {
-            let new = AppLaunch(path: path)
-            context.insert(new)
-            return new
-        }()
+        let launch = launchRecord(path: path)
         launch.count += 1
         launch.lastLaunched = .now
+        try? context.save()
+    }
+
+    private func launchRecord(path: String) -> AppLaunch {
+        var descriptor = FetchDescriptor<AppLaunch>(predicate: #Predicate { $0.path == path })
+        descriptor.fetchLimit = 1
+        if let existing = try? context.fetch(descriptor).first { return existing }
+        let new = AppLaunch(path: path)
+        context.insert(new)
+        return new
+    }
+
+    // MARK: Pinned apps
+
+    /// Pinned apps in grid order. Apps that were moved or deleted are left out.
+    func pinnedApps() -> [LaunchCandidate] {
+        let descriptor = FetchDescriptor<AppLaunch>(predicate: #Predicate { $0.isPinned },
+                                                    sortBy: [SortDescriptor(\.pinOrder)])
+        return ((try? context.fetch(descriptor)) ?? [])
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+            .map { LaunchCandidate(name: AppIndex.name(atPath: $0.path), path: $0.path,
+                                   launchCount: $0.count, lastLaunched: $0.lastLaunched) }
+    }
+
+    /// Pins an app at the end of the grid, or unpins it.
+    func togglePin(appPath path: String) {
+        let launch = launchRecord(path: path)
+        if launch.isPinned {
+            launch.isPinned = false
+        } else {
+            pin(launch)
+        }
+        try? context.save()
+    }
+
+    /// Pins apps chosen with Add…, keeping any that are already pinned.
+    func pinApps(paths: [String]) {
+        for path in paths {
+            let launch = launchRecord(path: path)
+            if !launch.isPinned { pin(launch) }
+        }
+        try? context.save()
+    }
+
+    /// Pins after the last pinned app. Unpinning leaves gaps, so counting would collide.
+    private func pin(_ launch: AppLaunch) {
+        let pinned = (try? context.fetch(FetchDescriptor<AppLaunch>(predicate: #Predicate { $0.isPinned }))) ?? []
+        launch.pinOrder = (pinned.map(\.pinOrder).max() ?? -1) + 1
+        launch.isPinned = true
+    }
+
+    /// Moves a pinned app left (-1) or right (+1) in the grid.
+    func movePinned(path: String, by offset: Int) {
+        var paths = pinnedApps().map(\.path)
+        guard let from = paths.firstIndex(of: path) else { return }
+        let to = min(max(from + offset, 0), paths.count - 1)
+        paths.insert(paths.remove(at: from), at: to)
+        for (order, path) in paths.enumerated() { launchRecord(path: path).pinOrder = order }
         try? context.save()
     }
 

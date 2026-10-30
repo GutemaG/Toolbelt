@@ -15,8 +15,11 @@ struct ToolbeltView: View {
     let surface: Surface
     @Environment(AppModel.self) private var model
     @Query(sort: \ClipItem.copiedAt, order: .reverse) private var clips: [ClipItem]
+    @Query(filter: #Predicate<AppLaunch> { $0.isPinned }, sort: \AppLaunch.pinOrder) private var pinnedLaunches: [AppLaunch]
     @State private var query = ""
     @State private var selected = 0
+    /// Bumped by the arrow keys. Only keyboard moves scroll; hovering never does.
+    @State private var keyboardMoves = 0
     @State private var window: NSWindow?
     @State private var monitor: Any?
     @FocusState private var searchFocused: Bool
@@ -98,17 +101,31 @@ struct ToolbeltView: View {
                                 .accessibilityAddTraits(.isHeader)
                         }
                         let start = sections[..<index].reduce(0) { $0 + $1.entries.count }
-                        ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
-                            row(entry, selected: start + offset == selected)
-                                .contentShape(.rect)
-                                .onTapGesture { activate(entry, plainText: false) }
-                                .onHover { if $0 { selected = start + offset } }
+                        if section.grid {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.xs), count: gridColumns),
+                                      spacing: Space.xs) {
+                                ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
+                                    tile(entry, selected: start + offset == selected)
+                                        .contentShape(.rect)
+                                        .onTapGesture { activate(entry, plainText: false) }
+                                        .onHover { if $0 { selected = start + offset } }
+                                        .contextMenu { menu(for: entry) }
+                                }
+                            }
+                        } else {
+                            ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
+                                row(entry, selected: start + offset == selected)
+                                    .contentShape(.rect)
+                                    .onTapGesture { activate(entry, plainText: false) }
+                                    .onHover { if $0 { selected = start + offset } }
+                                    .contextMenu { menu(for: entry) }
+                            }
                         }
                     }
                 }
                 .padding(Space.sm)
             }
-            .onChange(of: selected) {
+            .onChange(of: keyboardMoves) {
                 let entries = flatEntries
                 if entries.indices.contains(selected) { proxy.scrollTo(entries[selected].id) }
             }
@@ -132,8 +149,15 @@ struct ToolbeltView: View {
                     .truncationMode(.tail)
                     .help(app.name)
                 Spacer(minLength: 0)
+                if pinnedPaths.contains(app.path) {
+                    Image(systemName: "pin.fill")
+                        .font(.caption)
+                        .accessibilityLabel("Pinned")
+                }
             case .clip(let clip):
                 ClipRow(clip: clip, icon: model.apps.icon(bundleID: clip.sourceBundleID), selected: selected)
+            case .add:
+                EmptyView()
             }
         }
         .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.primary))
@@ -147,6 +171,72 @@ struct ToolbeltView: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
         .accessibilityAction(named: entry.isApp ? "Open" : (surface == .panel ? "Paste" : "Copy")) {
             activate(entry, plainText: false)
+        }
+    }
+
+    /// A pinned app as an icon with its name below, or the Add… tile.
+    private func tile(_ entry: Entry, selected: Bool) -> some View {
+        VStack(spacing: Space.xs) {
+            switch entry {
+            case .app(let app):
+                Image(nsImage: model.apps.icon(for: app.path))
+                    .resizable()
+                    .frame(width: 48, height: 48)
+                Text(app.name)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .help(app.name)
+            default:
+                Image(systemName: "plus")
+                    .font(.title2)
+                    .frame(width: 48, height: 48)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
+                Text("Add…")
+                    .font(.caption)
+            }
+        }
+        .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.primary))
+        .padding(.horizontal, Space.xs)
+        .padding(.vertical, Space.sm)
+        .frame(maxWidth: .infinity)
+        .background {
+            if selected {
+                RoundedRectangle(cornerRadius: 12).fill(Palette.accent)
+            } else if case .add = entry {
+                RoundedRectangle(cornerRadius: 12).fill(.quaternary)
+            }
+        }
+        .help(entry.isApp ? "" : "Pin apps to the top of the Launcher")
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+    }
+
+    @ViewBuilder
+    private func menu(for entry: Entry) -> some View {
+        switch entry {
+        case .app(let app):
+            Button("Open") { activate(entry, plainText: false) }
+            Button(pinnedPaths.contains(app.path) ? "Unpin" : "Pin") { model.togglePin(appPath: app.path) }
+                .keyboardShortcut("p")
+            if pinnedPaths.contains(app.path) {
+                Button("Move Left") { model.movePinned(path: app.path, by: -1) }
+                Button("Move Right") { model.movePinned(path: app.path, by: 1) }
+            }
+            Divider()
+            Button("Show in Finder") {
+                NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: app.path)])
+            }
+        case .clip(let clip):
+            Button(surface == .panel ? "Paste" : "Copy") { activate(entry, plainText: false) }
+            Button(surface == .panel ? "Paste as Plain Text" : "Copy as Plain Text") { activate(entry, plainText: true) }
+            Button(clip.isPinned ? "Unpin" : "Pin") { model.togglePin(clip) }
+                .keyboardShortcut("p")
+            Divider()
+            Button("Delete", role: .destructive) { model.delete(clip) }
+                .keyboardShortcut(.delete)
+        case .add:
+            Button("Add…") { activate(entry, plainText: false) }
         }
     }
 
@@ -186,7 +276,7 @@ struct ToolbeltView: View {
 
     private var hint: String {
         switch model.tool {
-        case .launcher: return "↩ Open"
+        case .launcher: return "↩ Open   ⌘P Pin"
         case .clipboard:
             let main = surface == .panel ? "↩ Paste   ⌥↩ Paste as Plain Text" : "↩ Copy"
             return main + "   ⌘P Pin   ⌘⌫ Delete"
@@ -198,11 +288,14 @@ struct ToolbeltView: View {
     enum Entry: Identifiable {
         case app(LaunchCandidate)
         case clip(ClipItem)
+        /// The Add… tile at the end of the pinned apps.
+        case add
 
         var id: String {
             switch self {
             case .app(let app): "a:" + app.path
             case .clip(let clip): "c:" + clip.uuid.uuidString
+            case .add: "add"
             }
         }
 
@@ -212,6 +305,25 @@ struct ToolbeltView: View {
     struct Section {
         var title: String?
         var entries: [Entry]
+        /// Shown as a grid of icons instead of rows.
+        var grid = false
+    }
+
+    private var gridColumns: Int { surface == .panel ? 6 : 4 }
+
+    /// Pinned apps that still exist, in grid order.
+    private var pinnedApps: [LaunchCandidate] {
+        pinnedLaunches
+            .filter { FileManager.default.fileExists(atPath: $0.path) }
+            .map { LaunchCandidate(name: AppIndex.name(atPath: $0.path), path: $0.path,
+                                   launchCount: $0.count, lastLaunched: $0.lastLaunched) }
+    }
+
+    private var pinnedPaths: Set<String> { Set(pinnedLaunches.map(\.path)) }
+
+    /// How many entries the grid at the top holds (0 when it is hidden).
+    private var gridCount: Int {
+        sections.first.map { $0.grid ? $0.entries.count : 0 } ?? 0
     }
 
     private var sections: [Section] {
@@ -222,11 +334,16 @@ struct ToolbeltView: View {
             if !query.trimmingCharacters(in: .whitespaces).isEmpty {
                 return [Section(entries: ranked.map(Entry.app))]
             }
-            let frequent = Set(ranked.map(\.path))
-            let rest = candidates.filter { !frequent.contains($0.path) }
-            if ranked.isEmpty { return [Section(title: "Applications", entries: rest.map(Entry.app))] }
-            return [Section(title: "Frequent", entries: ranked.map(Entry.app)),
+            // Pinned apps sit in the grid, so Frequent leaves them out.
+            let pinned = pinnedApps
+            let pinnedSet = Set(pinned.map(\.path))
+            let frequent = LauncherRanking.rank(candidates.filter { !pinnedSet.contains($0.path) }, query: "")
+            let frequentSet = Set(frequent.map(\.path))
+            let rest = candidates.filter { !frequentSet.contains($0.path) }
+            return [Section(title: "Pinned", entries: pinned.map(Entry.app) + [.add], grid: true),
+                    frequent.isEmpty ? nil : Section(title: "Frequent", entries: frequent.map(Entry.app)),
                     Section(title: "Applications", entries: rest.map(Entry.app))]
+                .compactMap { $0 }
         case .clipboard:
             let matching = clips.filter { $0.kind == .image ? query.isEmpty : ClipRules.matches(query, text: $0.text) }
             let pinned = matching.filter(\.isPinned).map(Entry.clip)
@@ -260,7 +377,25 @@ struct ToolbeltView: View {
                 model.copy(clip, plainText: plainText)
                 close()
             }
+        case .add:
+            chooseAppsToPin()
         }
+    }
+
+    /// Add…: pick apps in an Open panel and pin them.
+    private func chooseAppsToPin() {
+        close()
+        NSApp.activate()
+        let open = NSOpenPanel()
+        open.title = "Pin Apps"
+        open.prompt = "Pin"
+        open.message = "Choose apps to pin to the top of the Launcher."
+        open.allowedContentTypes = [.application]
+        open.allowsMultipleSelection = true
+        open.directoryURL = URL(fileURLWithPath: "/Applications")
+        guard open.runModal() == .OK else { return }
+        model.pinApps(paths: open.urls.map(\.path))
+        if surface == .panel { PanelController.shared.show(.launcher) }
     }
 
     private func close() {
@@ -297,9 +432,16 @@ struct ToolbeltView: View {
         let entries = flatEntries
         let current = entries.indices.contains(selected) ? entries[selected] : nil
         switch (event.keyCode, flags.contains(.command)) {
-        case (125, false): // Down
-            selected = min(selected + 1, max(entries.count - 1, 0))
+        case (125, false): // Down: one row, or one grid row inside the pinned grid
+            let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
+            selected = min(selected + step, max(entries.count - 1, 0))
         case (126, false): // Up
+            if selected < gridCount { selected = max(selected - gridColumns, 0) }
+            else if selected == gridCount { selected = max(gridCount - 1, 0) }
+            else { selected = max(selected - 1, 0) }
+        case (124, false) where selected < gridCount && query.isEmpty: // Right, inside the grid
+            selected = min(selected + 1, gridCount - 1)
+        case (123, false) where selected < gridCount && query.isEmpty: // Left, inside the grid
             selected = max(selected - 1, 0)
         case (36, _), (76, _): // Return, Enter
             if let current { activate(current, plainText: flags.contains(.option)) }
@@ -311,9 +453,12 @@ struct ToolbeltView: View {
         case (19, true): model.tool = .clipboard  // Command-2
         case (43, true): openSettings()            // Command-,
         case (12, true): NSApp.terminate(nil)      // Command-Q
-        case (35, true): // Command-P pins
-            guard case .clip(let clip)? = current else { return false }
-            model.togglePin(clip)
+        case (35, true): // Command-P pins a clip or an app
+            switch current {
+            case .clip(let clip)?: model.togglePin(clip)
+            case .app(let app)?: model.togglePin(appPath: app.path)
+            default: return false
+            }
         case (51, true): // Command-Delete
             guard case .clip(let clip)? = current else { return false }
             model.delete(clip)
@@ -321,6 +466,7 @@ struct ToolbeltView: View {
         default:
             return false
         }
+        if [123, 124, 125, 126].contains(event.keyCode) { keyboardMoves += 1 }
         return true
     }
 }

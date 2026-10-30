@@ -38,12 +38,18 @@ final class AppIndex {
                 .map { folder + "/" + $0 }
         } + extras
         for path in paths where fm.fileExists(atPath: path) {
-            let name = fm.displayName(atPath: path).replacingOccurrences(of: ".app", with: "")
+            let name = AppIndex.name(atPath: path)
             // The same app can sit in two folders; keep the first.
             guard seen.insert(name.lowercased()).inserted else { continue }
             result.append(App(name: name, path: path))
         }
         return result.sorted { $0.name.localizedStandardCompare($1.name) == .orderedAscending }
+    }
+
+    /// The name Finder shows, without ".app".
+    nonisolated static func name(atPath path: String) -> String {
+        let name = FileManager.default.displayName(atPath: path)
+        return name.hasSuffix(".app") ? String(name.dropLast(4)) : name
     }
 
     func icon(for path: String) -> NSImage {

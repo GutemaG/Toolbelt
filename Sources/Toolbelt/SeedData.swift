@@ -51,6 +51,9 @@ enum SeedData {
             launch.lastLaunched = .now
             context.insert(launch)
         }
+        let pinned = ["/Applications/Claude.app", "/Applications/Ghostty.app", "/Applications/Visual Studio Code.app",
+                      "/Applications/Telegram.app", "/System/Applications/Calendar.app"]
+        model.pinApps(paths: pinned.filter { FileManager.default.fileExists(atPath: $0) })
         try? context.save()
     }
 }

@@ -71,6 +71,17 @@ enum SelfTest {
                                                                              launchCount: $0.name == "Safari" ? 2 : 0) }, query: "")
             check("Frequent lists opened apps", ranked.first?.name == "Safari")
 
+            // S-027 pinned apps
+            let finder = "/System/Library/CoreServices/Finder.app", notes = "/System/Applications/Notes.app"
+            model.pinApps(paths: [finder, notes])
+            check("Add… pins apps in order", model.pinnedApps().map(\.path) == [finder, notes])
+            model.movePinned(path: notes, by: -1)
+            check("Move Left reorders pinned apps", model.pinnedApps().map(\.path) == [notes, finder])
+            model.togglePin(appPath: notes)
+            check("Unpin removes the app from the grid", model.pinnedApps().map(\.path) == [finder])
+            model.togglePin(appPath: notes)
+            check("pinning again adds it at the end", model.pinnedApps().map(\.path) == [finder, notes])
+
             // S-002 secrets
             check("password manager copies are skipped",
                   ClipRules.shouldSkip(types: ["org.nspasteboard.ConcealedType"], sourceApp: nil))

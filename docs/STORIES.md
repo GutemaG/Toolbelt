@@ -314,6 +314,24 @@ Acceptance:
 - [snap] The icon renders in light, dark, and tinted looks.
 Status: todo
 
+### S-027 Pin apps to the top of the Launcher
+As the user, I pin the apps I use most so they show as a grid of icons at the
+top of the Launcher, like pinned clips.
+Screens: panel-launcher, popover-launcher
+Depends: S-006
+Acceptance:
+- [snap] With an empty search, a "Pinned" grid of icons with names sits above Frequent, ending with an "Add…" tile (6 across in the panel, 4 in the popover).
+- [self] Add… pins the chosen apps at the end; Move Left/Right reorders; Unpin removes; pinning again adds at the end.
+- [manual] ⌘P or right-click > Pin on any app row pins it; pinned apps leave Frequent and show a pin in search results.
+- [manual] Arrow keys move through the grid by column and row; Return opens the selected app.
+UX:
+- Flow: ⌘P on a row, right-click > Pin, or Add… > choose apps > Pin -> tile appears at the end of the grid -> right-click a tile > Move Left / Move Right / Unpin / Show in Finder
+- Surface: grid section inside the Launcher list (a place people come back to); Add… uses the system Open panel
+- States: no pinned apps shows only the Add… tile; an app that was moved or deleted drops out of the grid
+- Words: "Pinned", "Add…", "Pin", "Unpin", "Move Left", "Move Right", "Show in Finder"; Open panel title "Pin Apps", button "Pin"; Add… tooltip "Pin apps to the top of the Launcher"
+- Access: tiles are buttons that read the app name; arrows, Return and ⌘P work without a mouse
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
