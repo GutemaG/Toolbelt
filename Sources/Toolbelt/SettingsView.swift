@@ -60,6 +60,9 @@ struct SettingsView: View {
             case .camera: ToolSettings(tool: .camera)
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
+            case .pomodoro: ToolSettings(tool: .pomodoro)
+            case .calendar: ToolSettings(tool: .calendar)
+            case .nowPlaying: ToolSettings(tool: .nowPlaying)
             case .worldClock: ToolSettings(tool: .worldClock)
             case .sound: ToolSettings(tool: .sound)
             case .mixer: ToolSettings(tool: .mixer)
@@ -96,7 +99,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, worldClock, sound, mixer, toggles, knock, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -108,7 +111,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
-        case .timer, .worldClock, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
+        case .timer, .pomodoro, .calendar, .worldClock, .nowPlaying, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -444,6 +447,17 @@ struct ToolSettings: View {
             SystemOptions()
         case .info:
             InfoOptions()
+        case .pomodoro:
+            PomodoroOptions()
+        case .nowPlaying:
+            NowPlayingOptions()
+        case .calendar:
+            Section {
+            } footer: {
+                Text("Calendar asks for access when you click Allow Calendar Access. It only reads your events, from every calendar on this Mac, and nothing leaves this Mac. Join appears on events with a Zoom, Meet, Teams, Webex, FaceTime, Whereby or Jitsi link.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         case .toggles:
             Section {
             } footer: {

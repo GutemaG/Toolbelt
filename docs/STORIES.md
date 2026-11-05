@@ -546,6 +546,45 @@ UX:
 - Words: "Layout", "Overview Grid", "Gauge Cards", "Glance Tabs", "Simple List", "Show All Details"
 Status: done
 
+### S-088 Focus and take breaks with Pomodoro
+As the user, I start a focus session, see the time left in a ring and the menu bar, and when it ends I'm chimed and asked to start my break; every few rounds the break is longer.
+Acceptance:
+- [unit] Every fourth focus earns the long break; dots fill and start over; the ring's progress stays in range.
+- [self] Start, pause, resume; the end of focus counts it, chimes and shows a banner; Later waits; breaks aren't counted; Skip doesn't count; a typed length starts focus; Reset; auto start skips the banner.
+- [snap] panel-pomodoro, panel-pomodoro-running, pomodoro-alert, popover-pomodoro, settings-pomodoro.
+- [manual] The chime is heard; the banner's buttons work on the first click; the count of today's sessions survives a restart.
+UX:
+- Flow: ↩ or Start Focus -> ring and menu bar count down -> chime and banner -> Start Break or Later -> ... ; ⌘→ Skip, ⌘R Reset
+- Surface: the shared panel and popover, a banner at the top of the screen, Settings > Pomodoro
+- Words: "Start Focus", "Start Break", "Focus Done", "Break Over", "Later"
+Status: done
+
+### S-089 See the month and my events in Calendar
+As the user, I see the month with a dot on days with events, click a day for its events, see what's next with a countdown, join a call in one click, and search my events.
+Acceptance:
+- [unit] The grid starts on the calendar's first weekday, always six weeks; only real meeting hosts count as links; countdown words.
+- [self] Sample events only; days and months move; Today comes back; the next event skips all-day ones; search.
+- [snap] panel-calendar, panel-calendar-access, popover-calendar, settings-calendar.
+- [manual] Allow Calendar Access asks once and shows real events; clicking an event opens it in Calendar; Join opens the call; a new event in Calendar appears by itself.
+UX:
+- Flow: arrows or click -> a day's events; ⌘←→ month; ↩ Today; type to search the coming year
+- Surface: the shared panel and popover, Settings > Calendar. It only reads events.
+- States: the month without access, beside "Allow Calendar Access"; "Open System Settings" when turned off; "No Events"; "No Results"
+Status: done
+
+### S-090 See and control the song in Now Playing
+As the user, I see the song in Music or Spotify with its cover and time, play, pause, skip and drag through it; for other players, the buttons press my Mac's media keys.
+Acceptance:
+- [unit] Reads both players' script output, including comma decimals and Spotify's milliseconds; ignores non-tracks; spots refused permission; clock words.
+- [self] A sample song only: pause holds the time, play moves it on and stops at the end, dragging moves it; the installed players' scripts compile.
+- [snap] panel-nowPlaying, panel-nowPlaying-empty, popover-nowPlaying, settings-nowPlaying.
+- [manual] With Music and with Spotify: asks for Automation once, shows the song and cover, follows a change of song by itself, each button works, a player not running isn't started.
+UX:
+- Flow: open while something plays -> ↩ play or pause, ←→ previous or next, drag the bar
+- Surface: the shared panel and popover, Settings > Now Playing. Reads only while open.
+- States: "Nothing Playing" with media key buttons and Open buttons; "Toolbelt Can't See Your Player" when Automation is off
+Status: done
+
 ### S-071 Switch sound output
 As the user, I pick speakers, headphones or AirPods from Sound, or mute, without opening Control Center.
 Status: done

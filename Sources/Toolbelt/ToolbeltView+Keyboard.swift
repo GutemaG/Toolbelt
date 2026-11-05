@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import ToolbeltKit
 
 /// Keyboard handling and the capture row, split from ToolbeltView to keep it readable.
 extension ToolbeltView {
@@ -93,6 +94,25 @@ extension ToolbeltView {
         case (123, false) where tool == .info && query.isEmpty: MacInfo.shared.step(-1) // Left: previous Info tab
         case (124, false) where tool == .info && query.isEmpty: MacInfo.shared.step(1)  // Right: next Info tab
         case (15, true) where tool == .info: MacInfo.shared.refresh() // Command-R
+        case (36, _) where tool == .pomodoro, (76, _) where tool == .pomodoro: // Return: a typed length, or start and pause
+            if let length = TimerRules.parse(query) {
+                PomodoroTool.shared.startFocus(length: length)
+                query = ""
+            } else {
+                PomodoroTool.shared.toggle()
+            }
+        case (124, true) where tool == .pomodoro: PomodoroTool.shared.skip() // Command-Right
+        case (15, true) where tool == .pomodoro: PomodoroTool.shared.reset() // Command-R
+        case (36, _) where tool == .nowPlaying, (76, _) where tool == .nowPlaying: NowPlaying.shared.send(.playPause) // Return
+        case (123, false) where tool == .nowPlaying && query.isEmpty: NowPlaying.shared.send(.previous) // Left
+        case (124, false) where tool == .nowPlaying && query.isEmpty: NowPlaying.shared.send(.next) // Right
+        case (123, true) where tool == .calendar: CalendarTool.shared.moveMonth(by: -1) // Command-Left
+        case (124, true) where tool == .calendar: CalendarTool.shared.moveMonth(by: 1) // Command-Right
+        case (123, false) where tool == .calendar && query.isEmpty: CalendarTool.shared.move(days: -1) // Left
+        case (124, false) where tool == .calendar && query.isEmpty: CalendarTool.shared.move(days: 1) // Right
+        case (125, false) where tool == .calendar && query.isEmpty: CalendarTool.shared.move(days: 7) // Down
+        case (126, false) where tool == .calendar && query.isEmpty: CalendarTool.shared.move(days: -7) // Up
+        case (36, _) where tool == .calendar, (76, _) where tool == .calendar: CalendarTool.shared.goToToday() // Return
         case (36, _) where tool == .info && MacInfo.shared.showsGrid && query.isEmpty, (76, _) where tool == .info && MacInfo.shared.showsGrid && query.isEmpty:
             MacInfo.shared.open(MacInfo.shared.tab) // Return opens the chosen card
         case (36, _) where tool == .camera, (76, _) where tool == .camera: model.photoCount += 1 // Return takes a photo

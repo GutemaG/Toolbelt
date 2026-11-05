@@ -144,7 +144,7 @@ final class StatusItems {
         // The city's time and the time left sit on their tool's own icon, or
         // side by side on the Toolbelt icon without one.
         var onMain: [String] = []
-        for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText)] {
+        for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText), (.pomodoro, PomodoroTool.shared.menuBarText)] {
             if let item = tools[tool] {
                 // A flag or a city name says what the icon would; the time alone needs it.
                 item.setTitle(text, hidesImage: tool == .worldClock && WorldClock.shared.menuBarStyle != .timeOnly)

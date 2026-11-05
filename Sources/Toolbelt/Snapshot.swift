@@ -192,6 +192,36 @@ enum Snapshot {
                 }
                 model.timerDone = nil
             }
+            // Pomodoro running and asking; Calendar before access; Now Playing with nothing on.
+            if only == nil || only?.contains("newtools") == true {
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PomodoroTool.shared.start()
+                    PanelController.shared.show(.pomodoro)
+                    try? await Task.sleep(for: .seconds(1.8))
+                    capture(to: "\(dir)/panel-pomodoro-running-\(mode).png", window: PanelController.shared.panel)
+                    PanelController.shared.hide()
+                    PomodoroTool.shared.reset()
+                    PomodoroAlert.show(ended: .focus, next: .shortBreak, length: 300)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/pomodoro-alert-\(mode).png", window: PomodoroAlert.panel)
+                    PomodoroAlert.hide()
+                    CalendarTool.shared.usesSamples = false
+                    CalendarTool.shared.access = .notAsked
+                    PanelController.shared.show(.calendar)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-calendar-access-\(mode).png", window: PanelController.shared.panel)
+                    CalendarTool.shared.usesSamples = true
+                    CalendarTool.shared.access = .allowed
+                    PanelController.shared.hide()
+                    NowPlaying.shared.usesSample = false
+                    PanelController.shared.show(.nowPlaying)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-nowPlaying-empty-\(mode).png", window: PanelController.shared.panel)
+                    NowPlaying.shared.usesSample = true
+                    PanelController.shared.hide()
+                }
+            }
             // The menu bar popover's width, where the tool picker wraps onto two rows.
             if only == nil || only?.contains("popover") == true {
                 let host = NSHostingView(rootView: ToolbeltView(surface: .popover)
@@ -201,7 +231,7 @@ enum Snapshot {
                 let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
                 window.contentView = host
                 window.orderFrontRegardless()
-                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark"), (.timer, "light"), (.timer, "dark")] {
+                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark"), (.timer, "light"), (.timer, "dark"), (.pomodoro, "light"), (.pomodoro, "dark"), (.calendar, "light"), (.calendar, "dark"), (.nowPlaying, "light"), (.nowPlaying, "dark")] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     model.tool = tool
                     try? await Task.sleep(for: .seconds(0.8))

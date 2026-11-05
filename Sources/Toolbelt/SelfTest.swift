@@ -416,6 +416,78 @@ enum SelfTest {
             let unnamed = InfoSummary.make(.hardware, sections: [InfoSection(title: "macOS", rows: [InfoRow(label: "Name", value: "macOS 27"), InfoRow(label: "Version", value: "27.0.1")])])
             check("a macOS without a name doesn't repeat its version", unnamed?.subtitle == "Mac · macOS 27.0.1", unnamed?.subtitle ?? "none")
 
+            // S-088 Pomodoro: focus, breaks, a long break after the last round
+            let pomodoro = PomodoroTool.shared
+            check("Pomodoro starts on 25 minutes of focus", pomodoro.phase == .focus && pomodoro.remaining == 25 * 60 && !pomodoro.isRunning)
+            pomodoro.toggle()
+            check("Pomodoro starts and counts down", pomodoro.isRunning && pomodoro.remaining <= 25 * 60 && pomodoro.menuBarText?.hasPrefix("Focus ") == true)
+            pomodoro.toggle()
+            let held = pomodoro.remaining
+            check("Pomodoro pauses and holds its time", pomodoro.isPaused && !pomodoro.isRunning && pomodoro.menuBarText?.hasPrefix("⏸ Focus") == true)
+            pomodoro.toggle()
+            check("Pomodoro resumes from there", pomodoro.isRunning && pomodoro.remaining <= held && pomodoro.remaining > held - 2)
+            pomodoro.finish()
+            check("the end of focus counts it, chimes and asks with a banner", pomodoro.completed == 1 && pomodoro.finishedToday == 1 && pomodoro.phase == .shortBreak
+                  && pomodoro.isRinging && pomodoro.isChiming && PomodoroAlert.panel?.isVisible == true)
+            pomodoro.later()
+            check("Later stops the chime and banner and waits", !pomodoro.isRinging && !pomodoro.isChiming && PomodoroAlert.panel == nil && !pomodoro.isRunning && pomodoro.phase == .shortBreak)
+            pomodoro.start()
+            check("a break runs its own length", pomodoro.isRunning && pomodoro.remaining <= 5 * 60 && pomodoro.menuBarText?.hasPrefix("Break ") == true)
+            pomodoro.finish()
+            check("a finished break isn't counted, and focus follows", pomodoro.completed == 1 && pomodoro.phase == .focus)
+            for _ in 0..<3 {
+                pomodoro.start(); pomodoro.finish()
+                if pomodoro.phase == .shortBreak { pomodoro.start(); pomodoro.finish() }
+            }
+            check("the last round earns the long break", pomodoro.completed == 4 && pomodoro.phase == .longBreak && pomodoro.length == 15 * 60)
+            pomodoro.skip()
+            check("Skip moves on without counting", pomodoro.phase == .focus && pomodoro.completed == 4 && !pomodoro.isRinging)
+            pomodoro.startFocus(length: 90)
+            check("a typed length starts focus at that length", pomodoro.isRunning && pomodoro.phase == .focus && pomodoro.plan.focus == 90)
+            pomodoro.reset()
+            check("Reset goes back to the first round", pomodoro.completed == 0 && pomodoro.phase == .focus && !pomodoro.isActive && pomodoro.menuBarText == nil)
+            pomodoro.plan.focus = 25 * 60
+            pomodoro.startsNextByItself = true
+            pomodoro.start(); pomodoro.finish()
+            check("with auto start, the break begins without a banner", pomodoro.isRunning && pomodoro.phase == .shortBreak && !pomodoro.isRinging && PomodoroAlert.panel == nil)
+            pomodoro.reset()
+            pomodoro.startsNextByItself = false
+
+            // S-089 Calendar: the month, days and sample events, never the real calendars
+            let cal = CalendarTool.shared
+            cal.opened()
+            check("Calendar opens on today with sample events", Calendar.current.isDateInToday(cal.selected) && cal.access == .allowed && !cal.events.isEmpty)
+            check("the month grid holds today", cal.days.count == 42 && cal.days.contains { Calendar.current.isDateInToday($0) })
+            cal.move(days: 1)
+            check("an arrow moves a day", Calendar.current.isDateInTomorrow(cal.selected) && cal.events(on: cal.selected).contains { $0.title == "Lunch with Sam" })
+            cal.moveMonth(by: 1)
+            check("the month moves with it", Calendar.current.isDate(cal.month, equalTo: cal.selected, toGranularity: .month) && !Calendar.current.isDate(cal.month, equalTo: .now, toGranularity: .month))
+            cal.goToToday()
+            check("Today comes back", Calendar.current.isDateInToday(cal.selected) && Calendar.current.isDate(cal.month, equalTo: .now, toGranularity: .month))
+            check("the next event skips all-day ones and has its call link", cal.nextEvent(at: .now)?.isAllDay == false && cal.upcoming.contains { $0.link != nil })
+            check("search finds events by title and place", cal.search("dentist").count == 1 && cal.search("corner").count == 1 && cal.search("zzz").isEmpty)
+
+            // S-090 Now Playing: a sample song, and the scripts compile without touching a player
+            let playing = NowPlaying.shared
+            playing.start()
+            check("Now Playing shows the song", playing.track?.title == "Sample Song" && playing.track?.isPlaying == true)
+            playing.send(.playPause)
+            let pausedAt = playing.elapsed(at: .now)
+            check("Pause holds the time", playing.track?.isPlaying == false && playing.elapsed(at: .now.addingTimeInterval(30)) == pausedAt)
+            playing.send(.playPause)
+            check("Play moves the time on, and stops at the end", playing.elapsed(at: .now.addingTimeInterval(30)) > pausedAt && playing.elapsed(at: .now.addingTimeInterval(9999)) == playing.track?.duration)
+            playing.send(.seek(10))
+            check("dragging moves through the song", abs(playing.elapsed(at: .now) - 10) < 1)
+            for player in playing.installedPlayers {
+                var failure: NSDictionary?
+                check("\(player.title)'s scripts compile",
+                      NSAppleScript(source: NowPlayingRules.readScript(player))?.compileAndReturnError(&failure) == true
+                      && NSAppleScript(source: NowPlayingRules.commandScript(player, .next))?.compileAndReturnError(&failure) == true
+                      && (player != .music || NSAppleScript(source: NowPlayingRules.artworkScript(path: "/tmp/x"))?.compileAndReturnError(&failure) == true),
+                      "\(failure ?? [:])")
+            }
+            playing.stop()
+
             // S-076 System: read only, nothing is quit
             let sensors = SystemSensors()
             _ = await sensors.read(processes: true)

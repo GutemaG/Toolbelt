@@ -504,3 +504,135 @@ private extension KnockDetector.Event {
     // No flag leaves no stray space.
     #expect(WorldClockMenuStyle.flagAndTime.text(WorldCity(name: "Nowhere", zone: "UTC"), at: date, locale: gb) == "23:30")
 }
+
+// MARK: Pomodoro
+
+@Test func pomodoroEveryFourthFocusEarnsTheLongBreak() {
+    #expect(PomodoroRules.next(after: .focus, completed: 1, rounds: 4) == .shortBreak)
+    #expect(PomodoroRules.next(after: .focus, completed: 3, rounds: 4) == .shortBreak)
+    #expect(PomodoroRules.next(after: .focus, completed: 4, rounds: 4) == .longBreak)
+    #expect(PomodoroRules.next(after: .focus, completed: 8, rounds: 4) == .longBreak)
+    #expect(PomodoroRules.next(after: .shortBreak, completed: 1, rounds: 4) == .focus)
+    #expect(PomodoroRules.next(after: .longBreak, completed: 4, rounds: 4) == .focus)
+}
+
+@Test func pomodoroDotsFillAndStartOver() {
+    #expect(PomodoroRules.filledDots(completed: 0, rounds: 4, phase: .focus) == 0)
+    #expect(PomodoroRules.filledDots(completed: 3, rounds: 4, phase: .shortBreak) == 3)
+    #expect(PomodoroRules.filledDots(completed: 4, rounds: 4, phase: .longBreak) == 4)
+    #expect(PomodoroRules.filledDots(completed: 4, rounds: 4, phase: .focus) == 0)
+}
+
+@Test func pomodoroProgressStaysInRange() {
+    #expect(PomodoroRules.progress(remaining: 1500, length: 1500) == 0)
+    #expect(PomodoroRules.progress(remaining: 750, length: 1500) == 0.5)
+    #expect(PomodoroRules.progress(remaining: -5, length: 1500) == 1)
+    #expect(PomodoroRules.progress(remaining: 5, length: 0) == 0)
+}
+
+// MARK: Calendar
+
+private func gregorian(firstWeekday: Int) -> Calendar {
+    var calendar = Calendar(identifier: .gregorian)
+    calendar.timeZone = TimeZone(identifier: "UTC")!
+    calendar.locale = Locale(identifier: "en_US")
+    calendar.firstWeekday = firstWeekday
+    return calendar
+}
+
+@Test func calendarMonthStartsOnTheFirstWeekday() {
+    // November 2026 begins on a Sunday.
+    let date = ISO8601DateFormatter().date(from: "2026-11-15T12:00:00Z")!
+    let sunday = gregorian(firstWeekday: 1)
+    let days = CalendarRules.monthDays(containing: date, calendar: sunday)
+    #expect(days.count == 42)
+    #expect(sunday.component(.day, from: days[0]) == 1)
+    #expect(sunday.component(.weekday, from: days[0]) == 1)
+    let monday = gregorian(firstWeekday: 2)
+    let mondays = CalendarRules.monthDays(containing: date, calendar: monday)
+    #expect(monday.component(.weekday, from: mondays[0]) == 2)
+    #expect(monday.component(.day, from: mondays[0]) == 26) // the end of October
+    #expect(monday.component(.day, from: mondays[6]) == 1)
+}
+
+@Test func calendarTrimsWeeksOfOnlyTheNextMonth() {
+    let sunday = gregorian(firstWeekday: 1)
+    // November 2026 ends in its fifth row; February 2026 fills exactly four.
+    let november = ISO8601DateFormatter().date(from: "2026-11-15T12:00:00Z")!
+    #expect(CalendarRules.trimmed(CalendarRules.monthDays(containing: november, calendar: sunday), toMonthOf: november, calendar: sunday).count == 35)
+    let february = ISO8601DateFormatter().date(from: "2026-02-15T12:00:00Z")!
+    #expect(CalendarRules.trimmed(CalendarRules.monthDays(containing: february, calendar: sunday), toMonthOf: february, calendar: sunday).count == 28)
+    // August 2026 starts on a Saturday and needs all six.
+    let august = ISO8601DateFormatter().date(from: "2026-08-15T12:00:00Z")!
+    #expect(CalendarRules.trimmed(CalendarRules.monthDays(containing: august, calendar: sunday), toMonthOf: august, calendar: sunday).count == 42)
+}
+
+@Test func calendarWeekdayLettersFollowTheFirstWeekday() {
+    #expect(CalendarRules.weekdayLetters(calendar: gregorian(firstWeekday: 1)) == ["S", "M", "T", "W", "T", "F", "S"])
+    #expect(CalendarRules.weekdayLetters(calendar: gregorian(firstWeekday: 2)) == ["M", "T", "W", "T", "F", "S", "S"])
+}
+
+@Test func calendarFindsMeetingLinksOnly() {
+    #expect(CalendarRules.meetingLink(in: [nil, "Join https://us02web.zoom.us/j/123?pwd=x now"])?.host() == "us02web.zoom.us")
+    #expect(CalendarRules.meetingLink(in: ["https://meet.google.com/abc-defg-hij"]) != nil)
+    #expect(CalendarRules.meetingLink(in: ["https://example.com/agenda", "Room 4"]) == nil)
+    // A look-alike host isn't a meeting.
+    #expect(CalendarRules.meetingLink(in: ["https://zoom.us.evil.example/j/1"]) == nil)
+    #expect(CalendarRules.meetingLink(in: ["http://zoom.us/j/1"]) == nil)
+}
+
+@Test func calendarCountdownWords() {
+    let now = Date(timeIntervalSince1970: 1_000_000)
+    func text(_ minutes: Double, length: Double = 30) -> String? {
+        let start = now.addingTimeInterval(minutes * 60)
+        return CalendarRules.countdown(from: now, start: start, end: start.addingTimeInterval(length * 60))
+    }
+    #expect(text(12) == "in 12 min")
+    #expect(text(60) == "in 1 h")
+    #expect(text(125) == "in 2 h 5 min")
+    #expect(text(-5) == "now")
+    #expect(text(-60) == nil)
+    #expect(text(24 * 60) == nil)
+}
+
+// MARK: Now Playing
+
+@Test func nowPlayingReadsMusicAndSpotify() {
+    let d = "\u{1F}"
+    let music = NowPlayingRules.parse("playing\(d)Song, Part 2\(d)Artist\(d)Album\(d)212,5\(d)30,25\(d)\n", player: .music)
+    #expect(music?.title == "Song, Part 2")
+    #expect(music?.isPlaying == true)
+    #expect(music?.duration == 212.5)
+    #expect(music?.position == 30.25)
+    #expect(music?.artworkURL == nil)
+    let spotify = NowPlayingRules.parse("paused\(d)Tune\(d)Band\(d)LP\(d)180000\(d)12.5\(d)https://i.scdn.co/image/abc", player: .spotify)
+    #expect(spotify?.isPlaying == false)
+    #expect(spotify?.duration == 180)
+    #expect(spotify?.artworkURL?.host() == "i.scdn.co")
+}
+
+@Test func nowPlayingIgnoresWhatIsNotATrack() {
+    #expect(NowPlayingRules.parse("stopped", player: .music) == nil)
+    #expect(NowPlayingRules.parse("", player: .spotify) == nil)
+    #expect(NowPlayingRules.parse("execution error: Not authorized to send Apple events to Music. (-1743)", player: .music) == nil)
+}
+
+@Test func nowPlayingSpotsRefusedPermission() {
+    #expect(NowPlayingRules.isPermissionDenied("execution error: Not authorized to send Apple events to Music. (-1743)"))
+    #expect(!NowPlayingRules.isPermissionDenied("playing"))
+}
+
+@Test func nowPlayingScriptsNameThePlayerById() {
+    #expect(NowPlayingRules.readScript(.spotify).contains("com.spotify.client"))
+    #expect(NowPlayingRules.readScript(.music).contains("com.apple.Music"))
+    #expect(NowPlayingRules.commandScript(.music, .next).contains("next track"))
+    #expect(NowPlayingRules.commandScript(.music, .seek(12.34)).contains("set player position to 12.3"))
+    #expect(NowPlayingRules.commandScript(.music, .seek(-3)).contains("to 0.0"))
+}
+
+@Test func nowPlayingClock() {
+    #expect(NowPlayingRules.clock(212) == "3:32")
+    #expect(NowPlayingRules.clock(5) == "0:05")
+    #expect(NowPlayingRules.clock(3725) == "1:02:05")
+    #expect(NowPlayingRules.clock(-4) == "0:00")
+}

@@ -107,6 +107,12 @@ struct ToolbeltView: View {
             }
             if tool == .info {
                 InfoView(surface: surface, query: query)
+            } else if tool == .pomodoro {
+                PomodoroView()
+            } else if tool == .calendar {
+                CalendarView(surface: surface, query: query)
+            } else if tool == .nowPlaying {
+                NowPlayingView(surface: surface)
             } else if tool == .camera {
                 CameraView(surface: surface, window: window)
             } else if tool == .knock {
@@ -227,6 +233,9 @@ struct ToolbeltView: View {
         case .mixer: return "Search Apps"
         case .worldClock: return "Search or Add Cities"
         case .timer: return "Type a Length, Like 12 or 1h30m"
+        case .pomodoro: return "Type a Focus Length, Like 25"
+        case .calendar: return "Search Events"
+        case .nowPlaying: return "Now Playing"
         default: return "Search \(tool.title)"
         }
     }

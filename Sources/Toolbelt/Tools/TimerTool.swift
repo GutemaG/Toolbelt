@@ -11,15 +11,12 @@ final class TimerTool {
     static var shared: TimerTool!
     private let model: AppModel
     private var tick: Task<Void, Never>?
-    private var chimes: Task<Void, Never>?
-    private var sound: NSSound?
+    private let chime = Chime()
     /// Without this, App Nap can hold back the tick of an app with no windows.
     private var activity: NSObjectProtocol?
     private let defaults: UserDefaults? = Store.isOverridden ? nil : .standard
 
-    /// How often the chime repeats, and how many times before it goes quiet.
-    /// The banner stays after that.
-    private static let chimeGap: Duration = .seconds(3)
+    /// How many times the chime repeats before it goes quiet. The banner stays after that.
     private static let chimeCount = 20
 
     init(model: AppModel) {
@@ -31,7 +28,7 @@ final class TimerTool {
     /// Time is up and nobody has dismissed it yet.
     var isRinging: Bool { model.timerDone != nil }
     /// The chime is playing or due again.
-    var isChiming: Bool { chimes != nil }
+    var isChiming: Bool { chime.isPlaying }
 
     /// The length last started from the Custom row.
     var customLength: TimeInterval {
@@ -92,10 +89,7 @@ final class TimerTool {
 
     /// Stops the chime and closes the banner.
     func dismiss() {
-        chimes?.cancel()
-        chimes = nil
-        sound?.stop()
-        sound = nil
+        chime.stop()
         model.timerDone = nil
         TimerAlert.hide()
         endActivity()
@@ -133,18 +127,7 @@ final class TimerTool {
 
     private func ring() {
         beginActivity()
-        let sound = NSSound(named: "Glass")
-        self.sound = sound
-        chimes = Task { [weak self] in
-            for _ in 0..<Self.chimeCount {
-                sound?.stop()
-                if sound?.play() != true { NSSound.beep() }
-                try? await Task.sleep(for: Self.chimeGap)
-                if Task.isCancelled { return }
-            }
-            self?.chimes = nil
-            self?.endActivity()
-        }
+        chime.play(times: Self.chimeCount) { [weak self] in self?.endActivity() }
     }
 
     private func beginActivity() {
@@ -176,6 +159,39 @@ final class TimerTool {
     }
 }
 
+/// A chime that repeats a few times, then goes quiet.
+@MainActor
+final class Chime {
+    private var task: Task<Void, Never>?
+    private var sound: NSSound?
+    private static let gap: Duration = .seconds(3)
+
+    var isPlaying: Bool { task != nil }
+
+    func play(times: Int, finished: (() -> Void)? = nil) {
+        stop()
+        let sound = NSSound(named: "Glass")
+        self.sound = sound
+        task = Task { [weak self] in
+            for _ in 0..<times {
+                sound?.stop()
+                if sound?.play() != true { NSSound.beep() }
+                try? await Task.sleep(for: Self.gap)
+                if Task.isCancelled { return }
+            }
+            self?.task = nil
+            finished?()
+        }
+    }
+
+    func stop() {
+        task?.cancel()
+        task = nil
+        sound?.stop()
+        sound = nil
+    }
+}
+
 /// The banner at the top of the screen when time is up. It stays until
 /// dismissed and leaves the keyboard with the app in front.
 @MainActor
@@ -184,17 +200,23 @@ enum TimerAlert {
 
     static func show(length: TimeInterval) {
         hide()
-        let host = NSHostingView(rootView: TimerAlertView(length: length, isMuted: AudioOutput.isMuted).themed())
+        panel = present(TimerAlertView(length: length, isMuted: AudioOutput.isMuted).themed(), below: PomodoroAlert.panel)
+    }
+
+    /// A banner at the top of the screen, or under one already there.
+    static func present(_ view: some View, below other: NSPanel?) -> NSPanel {
+        let host = NSHostingView(rootView: view)
         let size = host.fittingSize
         let panel = TimerAlertPanel(contentRect: NSRect(origin: .zero, size: size),
                                     styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.contentView = host
         if let screen = NSScreen.screenWithMouse ?? NSScreen.main {
             let frame = screen.visibleFrame
-            panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.maxY - size.height - Space.md))
+            let top = other.map { $0.frame.minY } ?? frame.maxY
+            panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: top - size.height - Space.md))
         }
         panel.orderFrontRegardless()
-        self.panel = panel
+        return panel
     }
 
     static func hide() {

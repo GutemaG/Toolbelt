@@ -15,8 +15,9 @@
 <key>NSHighResolutionCapable</key><true/>
 <key>NSPrincipalClass</key><string>NSApplication</string>
 <key>LSUIElement</key><true/>
-<key>NSAppleEventsUsageDescription</key><string>Toolbelt switches Dark Mode through System Events and empties the Trash through Finder when you ask it to.</string>
+<key>NSAppleEventsUsageDescription</key><string>Toolbelt switches Dark Mode through System Events, empties the Trash through Finder, and shows and controls the song in Music and Spotify when you ask it to.</string>
 <key>NSAudioCaptureUsageDescription</key><string>Toolbelt plays an app you turn down in Volume Mixer at the volume you choose. Nothing is recorded or saved.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>Toolbelt shows your events beside the month in Calendar. It only reads them, and nothing leaves this Mac.</string>
 <key>NSCameraUsageDescription</key><string>Toolbelt shows your camera in Camera, only while that tool is open.</string>
 <key>NSLocationUsageDescription</key><string>Toolbelt shows the name of your Wi-Fi network in Info. macOS counts network names as location.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>Toolbelt shows the name of your Wi-Fi network in Info. macOS counts network names as location.</string>

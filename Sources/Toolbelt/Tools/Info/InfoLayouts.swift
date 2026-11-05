@@ -39,7 +39,7 @@ struct InfoOverview: View {
     }
 
     private func card(_ tab: InfoTab) -> some View {
-        InfoOverviewCard(tab: tab, selected: tab == info.tab, height: surface == .popover ? Space.section * 2 + Space.xxl : Space.section * 4) { info.open(tab) }
+        InfoOverviewCard(tab: tab, selected: tab == info.tab, height: surface == .popover ? Space.section * 2 + Space.xxl : Space.section * 3 + Space.xxl) { info.open(tab) }
     }
 
     private var detailBar: some View {

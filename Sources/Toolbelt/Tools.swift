@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, worldClock, sound, mixer, toggles, knock, system, info, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -19,6 +19,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "Camera"
         case .windows: "Windows"
         case .timer: "Timer"
+        case .pomodoro: "Pomodoro"
+        case .calendar: "Calendar"
+        case .nowPlaying: "Now Playing"
         case .worldClock: "World Clock"
         case .sound: "Sound"
         case .mixer: "Volume Mixer"
@@ -41,6 +44,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "web.camera"
         case .windows: "rectangle.split.2x1"
         case .timer: "timer"
+        case .pomodoro: "hourglass"
+        case .calendar: "calendar"
+        case .nowPlaying: "music.note"
         case .worldClock: "globe"
         case .sound: "speaker.wave.2"
         case .mixer: "slider.horizontal.3"
@@ -64,6 +70,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "See yourself in a live camera preview, like a mirror."
         case .windows: "Snap the front window to halves, thirds or full size."
         case .timer: "Count down, with the time left in the menu bar."
+        case .pomodoro: "Focus and take breaks in turn, with the time left in the menu bar."
+        case .calendar: "The month and your events, with a join button for calls."
+        case .nowPlaying: "See and control the song in Music or Spotify."
         case .worldClock: "See the time in other cities, with one in the menu bar."
         case .sound: "Switch between speakers, headphones and AirPods."
         case .mixer: "Turn each app up, down or off on its own."
@@ -87,6 +96,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: .green
         case .windows: .indigo
         case .timer: .green
+        case .pomodoro: .orange
+        case .calendar: .red
+        case .nowPlaying: .pink
         case .worldClock: .teal
         case .sound: .cyan
         case .mixer: .orange
@@ -109,6 +121,9 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "Check how you look on camera"
         case .windows: "Snap windows"
         case .timer: "Start a timer"
+        case .pomodoro: "Focus, then take a break"
+        case .calendar: "See the month and your events"
+        case .nowPlaying: "Control what's playing"
         case .worldClock: "See the time in other cities"
         case .sound: "Choose the sound output"
         case .mixer: "Set the volume of each app"

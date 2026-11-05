@@ -25,8 +25,8 @@ enum ToolSwitcherStyle: String, CaseIterable, Identifiable {
 
 /// A tile per tool under the search field: tinted in the tool's color, filled
 /// when chosen. Hovering one names it at once, under the tile; the system
-/// tooltip is slow and can stay away while the app is inactive. All on one row
-/// in the panel, two balanced rows in the narrower popover.
+/// tooltip is slow and can stay away while the app is inactive. Two balanced
+/// rows in the popover, and in the panel once one row wouldn't fit.
 struct ToolTiles: View {
     let tools: [Tool]
     let current: Tool
@@ -34,9 +34,11 @@ struct ToolTiles: View {
     @Binding var hovered: Tool?
     let pick: (Tool) -> Void
 
-    private var size: CGFloat { surface == .panel ? Space.section : Space.section + Space.xs }
+    private var size: CGFloat { Space.section }
+    /// How many tiles fit on one row of the panel, at 32 pt with a 4 pt gap.
+    private static let panelRow = 17
     private var gap: CGFloat { surface == .panel ? Space.xs : Space.sm }
-    private var perRow: Int { surface == .panel ? max(tools.count, 1) : max((tools.count + 1) / 2, 1) }
+    private var perRow: Int { surface == .panel && tools.count <= Self.panelRow ? max(tools.count, 1) : max((tools.count + 1) / 2, 1) }
 
     var body: some View {
         LazyVGrid(columns: Array(repeating: GridItem(.fixed(size), spacing: gap), count: perRow), spacing: gap) {

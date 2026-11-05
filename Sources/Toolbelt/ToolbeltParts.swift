@@ -108,6 +108,29 @@ struct WindowReader: NSViewRepresentable {
     }
 }
 
+/// A tool's main button where the window stays inactive. The system prominent
+/// style turns gray there, and a tinted one blooms past legible on the dark
+/// glass panel, so this keeps full-contrast text on a fill of the tool's color.
+struct TintedActionStyle: ButtonStyle {
+    let tint: Color
+    @State private var hovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.callout.weight(.semibold))
+            .foregroundStyle(.primary)
+            .padding(.horizontal, Space.md)
+            .padding(.vertical, Space.xs + 2)
+            .background {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(tint.opacity(hovering || configuration.isPressed ? 0.5 : 0.35))
+            }
+            .contentShape(.rect)
+            .onHover { hovering = $0 }
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
 /// The capture buttons under the Launcher search: full-contrast text on a
 /// tinted fill. The system bordered style washes out on the glass panel and
 /// in the popover, so these draw their own fill and hover state.
