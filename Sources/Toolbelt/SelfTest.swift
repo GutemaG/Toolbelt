@@ -202,6 +202,19 @@ enum SelfTest {
             check("the slider stops at a day from now", clock.travel == WorldClockRules.travelReach)
             clock.travel = 0
             clock.menuBarStyle = .flagAndTime
+            // The knob points at the same place on the band as the time it means.
+            let bandCell = DayBandSliderCell()
+            let bandSlider = NSSlider(frame: CGRect(x: 0, y: 0, width: 600, height: 24)) // grid: ok test frame, not layout
+            bandSlider.cell = bandCell
+            bandSlider.minValue = -WorldClockRules.travelReach
+            bandSlider.maxValue = WorldClockRules.travelReach
+            for (name, value, expected) in [("start", bandSlider.minValue, bandCell.knobTravel.lowerBound),
+                                            ("middle", 0, (bandCell.knobTravel.lowerBound + bandCell.knobTravel.upperBound) / 2),
+                                            ("end", bandSlider.maxValue, bandCell.knobTravel.upperBound)] {
+                bandSlider.doubleValue = value
+                let center = bandCell.knobRect(flipped: false).midX
+                check("the knob lines up with the band at the \(name)", abs(center - expected) < 1, "knob \(center), band \(expected)")
+            }
             ToolPrefs.shared.enabled.remove(.worldClock)
             StatusItems.shared?.apply(ToolPrefs.shared)
             check("turning World Clock off clears the menu bar", StatusItems.shared?.mainTitle == "")

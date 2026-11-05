@@ -246,18 +246,24 @@ public enum WorldClockRules {
     }
 
     public static func period(_ zone: TimeZone, at date: Date) -> DayPeriod {
+        .at(hour: calendar(in: zone).component(.hour, from: date))
+    }
+
+    private static func calendar(in zone: TimeZone) -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
-        return .at(hour: calendar.component(.hour, from: date))
+        return calendar
     }
 
     /// The periods in a zone across the slider's whole reach around `now`.
     public static func daySegments(now: Date, in zone: TimeZone) -> [DaySegment] {
         let steps = Int(travelReach * 2 / travelStep)
+        // Redrawn on every slider move, so one calendar for all the steps.
+        let calendar = calendar(in: zone)
         var segments: [DaySegment] = []
         for step in 0..<steps {
             let date = now.addingTimeInterval(-travelReach + Double(step) * travelStep)
-            let period = period(zone, at: date)
+            let period = DayPeriod.at(hour: calendar.component(.hour, from: date))
             let start = Double(step) / Double(steps), end = Double(step + 1) / Double(steps)
             if segments.last?.period == period {
                 segments[segments.count - 1].end = end

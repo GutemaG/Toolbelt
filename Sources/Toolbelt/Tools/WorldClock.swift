@@ -235,12 +235,8 @@ struct TimeTravelBar: View {
                     }
                 }
                 .frame(minHeight: Space.xl)
-                band(now: context.date)
-                // Snapped here, not with `step:`, which draws a row of tick marks under the slider.
-                let step = WorldClockRules.travelStep, reach = WorldClockRules.travelReach
-                Slider(value: Binding(get: { clock.travel }, set: { clock.travel = ($0 / step).rounded() * step }),
-                       in: -reach...reach)
-                    .controlSize(.small)
+                DayBandSlider(value: Binding(get: { clock.travel }, set: { clock.travel = $0 }),
+                              segments: WorldClockRules.daySegments(now: context.date, in: .autoupdatingCurrent))
                     .help("Drag to see every clock earlier or later")
                     .accessibilityLabel("Time from now")
                     .accessibilityValue(WorldClockRules.travelLabel(clock.travel))
@@ -265,20 +261,74 @@ struct TimeTravelBar: View {
         }
         .fixedSize()
     }
+}
 
-    private func band(now: Date) -> some View {
-        GeometryReader { geometry in
-            HStack(spacing: 0) {
-                ForEach(Array(WorldClockRules.daySegments(now: now, in: .autoupdatingCurrent).enumerated()), id: \.offset) { _, segment in
-                    Rectangle()
-                        .fill(segment.period.color)
-                        .frame(width: geometry.size.width * (segment.end - segment.start))
-                }
-            }
+/// The system slider and knob, with the day's periods drawn as its track.
+/// SwiftUI's Slider cannot hide its own track, so this one is AppKit's.
+private struct DayBandSlider: NSViewRepresentable {
+    @Binding var value: TimeInterval
+    let segments: [WorldClockRules.DaySegment]
+
+    func makeNSView(context: Context) -> NSSlider {
+        let slider = NSSlider()
+        slider.cell = DayBandSliderCell()
+        slider.minValue = -WorldClockRules.travelReach
+        slider.maxValue = WorldClockRules.travelReach
+        slider.isContinuous = true
+        // The search field keeps the focus; the arrow keys reach the slider through it.
+        slider.refusesFirstResponder = true
+        slider.target = context.coordinator
+        slider.action = #selector(Coordinator.moved)
+        return slider
+    }
+
+    func updateNSView(_ slider: NSSlider, context: Context) {
+        context.coordinator.parent = self
+        (slider.cell as? DayBandSliderCell)?.segments = segments
+        if slider.doubleValue != value { slider.doubleValue = value }
+        slider.needsDisplay = true
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(parent: self) }
+
+    final class Coordinator: NSObject {
+        var parent: DayBandSlider
+
+        init(parent: DayBandSlider) { self.parent = parent }
+
+        @objc func moved(_ slider: NSSlider) {
+            let step = WorldClockRules.travelStep
+            parent.value = (slider.doubleValue / step).rounded() * step
         }
-        .frame(height: Space.xs)
-        .clipShape(.capsule)
-        .accessibilityHidden(true)
+    }
+}
+
+/// Draws the periods in place of the slider's bar. The colors line up with
+/// where the knob's center travels, so the knob points at the right hour.
+final class DayBandSliderCell: NSSliderCell {
+    var segments: [WorldClockRules.DaySegment] = []
+
+    /// How far the knob's center reaches at each end.
+    var knobTravel: ClosedRange<CGFloat> {
+        let bounds = controlView?.bounds ?? .zero
+        let half = knobThickness / 2
+        return (bounds.minX + half)...max(bounds.minX + half, bounds.maxX - half)
+    }
+
+    override func drawBar(inside rect: NSRect, flipped: Bool) {
+        let bounds = controlView?.bounds ?? rect
+        let bar = NSRect(x: bounds.minX, y: rect.midY - Space.xs, width: bounds.width, height: Space.sm)
+        NSGraphicsContext.saveGraphicsState()
+        NSBezierPath(roundedRect: bar, xRadius: bar.height / 2, yRadius: bar.height / 2).addClip()
+        let travel = knobTravel, length = travel.upperBound - travel.lowerBound
+        for (index, segment) in segments.enumerated() {
+            // The first and last colors run on past the knob's reach to the ends of the bar.
+            let start = index == 0 ? bar.minX : travel.lowerBound + length * segment.start
+            let end = index == segments.count - 1 ? bar.maxX : travel.lowerBound + length * segment.end
+            NSColor(segment.period.color).setFill()
+            NSRect(x: start, y: bar.minY, width: end - start, height: bar.height).fill()
+        }
+        NSGraphicsContext.restoreGraphicsState()
     }
 }
 
