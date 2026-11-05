@@ -250,6 +250,9 @@ enum SelfTest {
             check("counting down again closes the banner", TimerAlert.panel == nil && !TimerTool.shared.isChiming)
             TimerTool.shared.start(1)
             try? await Task.sleep(for: .seconds(2.5))
+            // On a busy Mac the timer can end late. Click once the banner has settled, as a person would.
+            for _ in 0..<40 where TimerAlert.panel == nil { try? await Task.sleep(for: .seconds(0.1)) }
+            try? await Task.sleep(for: .seconds(0.5))
             check("the banner leaves the keyboard with the other app", TimerAlert.panel?.isKeyWindow == false)
             // A real click on Done, sent to the window while it doesn't have focus.
             if let panel = TimerAlert.panel {

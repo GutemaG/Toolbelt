@@ -24,8 +24,9 @@ enum ToolSwitcherStyle: String, CaseIterable, Identifiable {
 }
 
 /// A tile per tool under the search field: tinted in the tool's color, filled
-/// when chosen. Hovering one names it in the footer. All on one row in the
-/// panel, two balanced rows in the narrower popover.
+/// when chosen. Hovering one names it at once, under the tile; the system
+/// tooltip is slow and can stay away while the app is inactive. All on one row
+/// in the panel, two balanced rows in the narrower popover.
 struct ToolTiles: View {
     let tools: [Tool]
     let current: Tool
@@ -49,7 +50,10 @@ struct ToolTiles: View {
                 .onHover { inside in
                     if inside { hovered = tool } else if hovered == tool { hovered = nil }
                 }
-                .help(tool.title + (index < 9 ? " (⌘\(index + 1))" : ""))
+                .overlay(alignment: labelAlignment(index)) {
+                    if tool == hovered { label(tool, index: index) }
+                }
+                .zIndex(tool == hovered ? 1 : 0)
                 .accessibilityLabel(tool.title)
                 .accessibilityAddTraits(tool == current ? [.isSelected, .isButton] : .isButton)
             }
@@ -57,6 +61,37 @@ struct ToolTiles: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Tools")
+    }
+
+    /// Tiles at the ends line up with the label, so the window doesn't cut it off.
+    private func labelAlignment(_ index: Int) -> Alignment {
+        switch index % perRow {
+        case 0: .topLeading
+        case perRow - 1: .topTrailing
+        default: .top
+        }
+    }
+
+    /// The name under the tile: an empty spacer the tile's height pushes it down.
+    private func label(_ tool: Tool, index: Int) -> some View {
+        VStack(alignment: labelAlignment(index).horizontal, spacing: 0) {
+            Color.clear.frame(width: 0, height: size + Space.xs)
+            HStack(spacing: Space.xs) {
+                Text(tool.title)
+                if index < 9 {
+                    Text("⌘\(index + 1)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.caption.weight(.medium))
+            .padding(.horizontal, Space.sm)
+            .padding(.vertical, 2)
+            .background(.regularMaterial, in: .capsule)
+            .shadow(radius: 2, y: 1)
+        }
+        .fixedSize()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder

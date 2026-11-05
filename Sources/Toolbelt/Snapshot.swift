@@ -140,6 +140,28 @@ enum Snapshot {
                     ToolPrefs.shared.toolSwitcher = .colorTiles
                 }
             }
+            // A tile's name while hovered: the first, the last, and one between.
+            if only == nil || only?.contains("switcher") == true {
+                for (surface, name, width) in [(Surface.popover, "popover", CGFloat(440)), (.panel, "panel", PanelController.size.width)] {
+                    let rows = ToolPrefs.shared.panelTools
+                    for (place, tool) in [("first", rows.first), ("middle", rows[rows.count / 2]), ("last", rows.last)] {
+                        guard let tool else { continue }
+                        let host = NSHostingView(rootView: ToolTiles(tools: rows, current: .worldClock, surface: surface, hovered: .constant(tool)) { _ in }
+                            .padding(.horizontal, Space.lg)
+                            .padding(.bottom, Space.section)
+                            .frame(width: width)
+                            .background(.background)
+                            .themed())
+                        let window = NSWindow(contentRect: CGRect(origin: CGPoint(x: 200, y: 400), size: host.fittingSize), styleMask: .borderless, backing: .buffered, defer: false)
+                        window.contentView = host
+                        window.orderFrontRegardless()
+                        NSApp.appearance = NSAppearance(named: .darkAqua)
+                        try? await Task.sleep(for: .seconds(0.5))
+                        capture(to: "\(dir)/tile-label-\(name)-\(place).png", window: window)
+                        window.orderOut(nil)
+                    }
+                }
+            }
             // The banner and the tiles when time is up, without the chime.
             if only == nil || only?.contains("timer") == true {
                 model.timerDone = 300

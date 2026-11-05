@@ -46,6 +46,7 @@ struct ToolbeltView: View {
                 }
                 VStack(spacing: 0) {
                     header
+                        .zIndex(1) // a tile's name floats over the list
                     Divider()
                     ZStack(alignment: .top) {
                         toolContent

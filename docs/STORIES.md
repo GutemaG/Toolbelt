@@ -526,7 +526,7 @@ As the user, I switch tools with a color tile per tool under the search field; o
 Acceptance:
 - [self] Color tiles are the starting choice.
 - [snap] panel and popover shots show the tiles; panel-switcher-open shows every tool by name; panel-switcher-rail and popover-rail show the column; settings-appearance shows the choice.
-- [manual] A click on a tool, or beside the menu, closes it; hovering a tile or rail icon names it in the footer; the choice survives a restart.
+- [manual] A click on a tool, or beside the menu, closes it; hovering a tile names it at once under the tile, over the list; hovering a rail icon names it in the footer; the choice survives a restart.
 UX:
 - Flow: click a tile, or in Title Menu the tool's name or ⌘T -> arrows or pointer -> ↩ or click; ⌘1 to ⌘9 and Tab always switch directly
 - Surface: the shared panel and popover; Settings > Appearance
