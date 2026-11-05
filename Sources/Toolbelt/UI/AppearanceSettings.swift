@@ -1,8 +1,10 @@
 import SwiftUI
 
-/// Settings > Appearance: the accent color. Light and dark mode follow the Mac.
+/// Settings > Appearance: the accent color and how tools are switched. Light
+/// and dark mode follow the Mac.
 struct AppearanceSettings: View {
     @Bindable private var store = ThemeStore.shared
+    @Bindable private var prefs = ToolPrefs.shared
 
     var body: some View {
         Section {
@@ -21,6 +23,16 @@ struct AppearanceSettings: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+        }
+        Section {
+            Picker(selection: $prefs.toolSwitcher) {
+                ForEach(ToolSwitcherStyle.allCases) { Text($0.title).tag($0) }
+            } label: {
+                Text("Switch tools with")
+                Text(prefs.toolSwitcher == .titleMenu
+                     ? "The tool's name beside the search field opens a menu of every tool (⌘T)."
+                     : "A column of tool icons stays down the left side.")
             }
         }
     }

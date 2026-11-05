@@ -117,6 +117,28 @@ enum Snapshot {
                 }
                 WorldClock.shared.menuBarStyle = .flagAndTime
             }
+            // The title menu open, by its real shortcut, and the side rail.
+            if only == nil || only?.contains("switcher") == true {
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PanelController.shared.show(.worldClock)
+                    try? await Task.sleep(for: .seconds(0.3))
+                    if let open = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                                                   windowNumber: PanelController.shared.panel.windowNumber, context: nil,
+                                                   characters: "t", charactersIgnoringModifiers: "t", isARepeat: false, keyCode: 17) {
+                        NSApp.postEvent(open, atStart: false)
+                    }
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-switcher-open-\(mode).png", window: PanelController.shared.panel)
+                    PanelController.shared.hide()
+                    ToolPrefs.shared.toolSwitcher = .sideRail
+                    PanelController.shared.show(.worldClock)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-switcher-rail-\(mode).png", window: PanelController.shared.panel)
+                    PanelController.shared.hide()
+                    ToolPrefs.shared.toolSwitcher = .titleMenu
+                }
+            }
             // The banner and the tiles when time is up, without the chime.
             if only == nil || only?.contains("timer") == true {
                 model.timerDone = 300
@@ -148,6 +170,14 @@ enum Snapshot {
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/popover-\(tool.rawValue)-\(mode).png", window: window)
                 }
+                ToolPrefs.shared.toolSwitcher = .sideRail
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    model.tool = .worldClock
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/popover-rail-\(mode).png", window: window)
+                }
+                ToolPrefs.shared.toolSwitcher = .titleMenu
                 window.orderOut(nil)
             }
             // The Markup window, on a drawn sample image that is deleted afterwards.

@@ -88,6 +88,7 @@ enum SelfTest {
 
             // S-032, S-034 tool switches and panel order
             let prefs = ToolPrefs.shared
+            check("the tool switcher starts as the title menu", prefs.toolSwitcher == .titleMenu)
             check("every tool starts on and in the panel", prefs.panelTools == Tool.allCases)
             prefs.move(.clipboard, by: -1)
             check("Move Up reorders the panel", prefs.panelTools.first == .clipboard)
@@ -261,6 +262,7 @@ enum SelfTest {
                     try? await Task.sleep(for: .seconds(0.2))
                 }
             }
+            for _ in 0..<20 where TimerTool.shared.isRinging { try? await Task.sleep(for: .seconds(0.1)) }
             check("Done works on the first click", !TimerTool.shared.isRinging)
             TimerTool.shared.dismiss()
             check("Done stops the chime and the banner", !TimerTool.shared.isRinging && !TimerTool.shared.isChiming && TimerAlert.panel == nil)

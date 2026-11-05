@@ -67,8 +67,26 @@ extension ToolbeltView {
     /// Key codes of 1 to 9 on the top row.
     static let digitKeys: [UInt16] = [18, 19, 20, 21, 23, 22, 26, 28, 25]
 
+    /// The open tool menu takes the arrow keys, Return and Escape.
+    func handleToolMenu(_ keyCode: UInt16) -> Bool {
+        let last = panelTools.count - 1
+        switch keyCode {
+        case 123: toolMenuIndex = max(toolMenuIndex - 1, 0) // Left
+        case 124: toolMenuIndex = min(toolMenuIndex + 1, last) // Right
+        case 125: toolMenuIndex = min(toolMenuIndex + toolMenuColumns, last) // Down
+        case 126: toolMenuIndex = max(toolMenuIndex - toolMenuColumns, 0) // Up
+        case 36, 76: // Return, Enter
+            if panelTools.indices.contains(toolMenuIndex) { model.tool = panelTools[toolMenuIndex] }
+            toolMenuOpen = false
+        case 53: toolMenuOpen = false // Escape
+        default: return false
+        }
+        return true
+    }
+
     func handle(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if toolMenuOpen, usesTitleMenu, !flags.contains(.command), handleToolMenu(event.keyCode) { return true }
         let entries = flatEntries
         let current = entries.indices.contains(selected) ? entries[selected] : nil
         switch (event.keyCode, flags.contains(.command)) {
@@ -112,6 +130,7 @@ extension ToolbeltView {
             model.tool = panelTools[(index + 1) % panelTools.count]
         case (let key, true) where fixedTool == nil && Self.digitKeys.firstIndex(of: key).map({ $0 < panelTools.count }) == true:
             model.tool = panelTools[Self.digitKeys.firstIndex(of: key)!] // Command-1 to Command-9
+        case (17, true) where usesTitleMenu: toggleToolMenu() // Command-T
         case (43, true): openSettings()            // Command-,
         case (12, true): NSApp.terminate(nil)      // Command-Q
         case (35, true): // Command-P pins a clip or an app

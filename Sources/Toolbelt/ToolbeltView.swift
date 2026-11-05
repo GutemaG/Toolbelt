@@ -26,6 +26,10 @@ struct ToolbeltView: View {
     @State var keyboardMoves = 0
     @State var window: NSWindow?
     @State var monitor: Any?
+    @State var toolMenuOpen = false
+    /// The tool the arrow keys or the pointer are on in the open menu.
+    @State var toolMenuIndex = 0
+    @State var railHover: Tool?
     @FocusState var searchFocused: Bool
 
     var tool: Tool { fixedTool ?? model.tool }
@@ -35,9 +39,62 @@ struct ToolbeltView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            header
-                .zIndex(1) // the tool name label under a hovered icon floats over the list
+            HStack(spacing: 0) {
+                if usesRail {
+                    ToolRail(tools: panelTools, current: tool, hovered: $railHover) { model.tool = $0 }
+                    Divider()
+                }
+                VStack(spacing: 0) {
+                    header
+                    Divider()
+                    ZStack(alignment: .top) {
+                        toolContent
+                        if toolMenuOpen, usesTitleMenu {
+                            // A click beside the menu closes it, and doesn't reach the list.
+                            Color.clear
+                                .contentShape(.rect)
+                                .onTapGesture { toolMenuOpen = false }
+                            ToolMenu(tools: panelTools, current: tool, columns: toolMenuColumns, highlighted: $toolMenuIndex) { chosen in
+                                model.tool = chosen
+                                toolMenuOpen = false
+                            }
+                        }
+                    }
+                }
+            }
             Divider()
+            footer
+        }
+        .background(WindowReader { window = $0 })
+        .modifier(SurfaceBackground(surface: surface))
+        .onAppear {
+            installKeyMonitor()
+            reset()
+        }
+        .onDisappear(perform: removeKeyMonitor)
+        .onChange(of: model.openCount) { reset() }
+        .onChange(of: model.tool) {
+            toolMenuOpen = false
+            query = ""
+            selected = 0
+            model.pickingApps = false
+            WorldClock.shared.travel = 0
+            if tool == .launcher { model.apps.refresh() }
+        }
+        .onChange(of: query) {
+            selected = 0
+            toolMenuOpen = false
+        }
+        // The chosen city stays chosen when the list changes order.
+        .onChange(of: WorldClock.shared.cities) { old, new in
+            guard query.isEmpty, old.indices.contains(selected), let index = new.firstIndex(of: old[selected]) else { return }
+            selected = index
+        }
+    }
+
+    @ViewBuilder
+    var toolContent: some View {
+        VStack(spacing: 0) {
             quickActions
             if tool == .system {
                 SystemGauges(window: window)
@@ -66,30 +123,12 @@ struct ToolbeltView: View {
                 Divider()
                 TimerCustomRow()
             }
-            Divider()
-            footer
         }
-        .background(WindowReader { window = $0 })
-        .modifier(SurfaceBackground(surface: surface))
-        .onAppear {
-            installKeyMonitor()
-            reset()
-        }
-        .onDisappear(perform: removeKeyMonitor)
-        .onChange(of: model.openCount) { reset() }
-        .onChange(of: model.tool) {
-            query = ""
-            selected = 0
-            model.pickingApps = false
-            WorldClock.shared.travel = 0
-            if tool == .launcher { model.apps.refresh() }
-        }
-        .onChange(of: query) { selected = 0 }
-        // The chosen city stays chosen when the list changes order.
-        .onChange(of: WorldClock.shared.cities) { old, new in
-            guard query.isEmpty, old.indices.contains(selected), let index = new.firstIndex(of: old[selected]) else { return }
-            selected = index
-        }
+    }
+
+    func toggleToolMenu() {
+        toolMenuIndex = panelTools.firstIndex(of: tool) ?? 0
+        toolMenuOpen.toggle()
     }
 
     /// The saved city highlighted in World Clock. nil means Local Time.
@@ -112,60 +151,37 @@ struct ToolbeltView: View {
 
     // MARK: Parts
 
-    /// In the panel the tool picker sits beside the search field while it
-    /// fits; otherwise, and always in the narrower popover, it gets its own
-    /// row below and wraps onto as many lines as it needs.
-    var header: some View {
-        VStack(spacing: 0) {
-            searchRow
-            if showsPicker, !pickerInline {
-                toolPicker
-                    .frame(maxWidth: .infinity)
-                    .padding(.horizontal, Space.lg)
-                    .padding(.bottom, Space.md)
-            }
-        }
-    }
+    var header: some View { searchRow }
 
     var showsPicker: Bool { fixedTool == nil && panelTools.count > 1 }
-
-    /// The picker fits beside the search field and leaves the field room to type.
-    var pickerInline: Bool {
-        surface == .panel && ToolPickerButton.width * CGFloat(panelTools.count) + 4 <= PanelController.size.width - Space.lg * 2 - 240
-    }
-
-    /// One button per tool. Hovering shows the tool's name at once, and the
-    /// system tooltip adds what it does and its ⌘ number.
-    var toolPicker: some View {
-        WrappingRow(spacing: 2) {
-            ForEach(Array(panelTools.enumerated()), id: \.element) { index, tool in
-                ToolPickerButton(tool: tool, number: index + 1, selected: tool == self.tool) {
-                    model.tool = tool
-                }
-            }
-        }
-        .padding(2)
-        // Half a row's height: a capsule on one row, rounded corners on more.
-        .background(.fill.tertiary, in: .rect(cornerRadius: 14)) // grid: ok a radius of half the row, not spacing
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("Tools")
-    }
+    var usesTitleMenu: Bool { showsPicker && ToolPrefs.shared.toolSwitcher == .titleMenu }
+    var usesRail: Bool { showsPicker && ToolPrefs.shared.toolSwitcher == .sideRail }
+    var toolMenuColumns: Int { surface == .panel ? 6 : 4 }
 
     var searchRow: some View {
-        HStack(spacing: Space.md) {
+        HStack(spacing: usesTitleMenu ? Space.sm : Space.md) {
+            if usesTitleMenu {
+                ToolMenuButton(tool: tool, isOpen: toolMenuOpen, action: toggleToolMenu)
+            }
             if tool == .camera || tool == .knock {
-                // Nothing to search: the row keeps the title and, in the panel, the tool picker.
-                Image(systemName: tool.symbol)
-                    .font(.title2)
-                    .foregroundStyle(.secondary)
-                Text(tool.title)
-                    .font(.title2)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                // Nothing to search: the row keeps the title, unless the switcher already says it.
+                if usesTitleMenu {
+                    Spacer(minLength: 0)
+                } else {
+                    Image(systemName: tool.symbol)
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text(tool.title)
+                        .font(.title2)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            } else if usesTitleMenu {
+                HStack(spacing: Space.sm) { searchField }
+                    .padding(.horizontal, Space.sm)
+                    .frame(height: Space.xxl + Space.sm)
+                    .background(.fill.tertiary, in: .rect(cornerRadius: 8))
             } else {
                 searchField
-            }
-            if showsPicker, pickerInline {
-                toolPicker
             }
         }
         .padding(.horizontal, Space.lg)
@@ -175,11 +191,11 @@ struct ToolbeltView: View {
     @ViewBuilder
     var searchField: some View {
         Image(systemName: "magnifyingglass")
-            .font(.title2)
+            .font(usesTitleMenu ? .callout : .title2)
             .foregroundStyle(.secondary)
         TextField(placeholder, text: $query)
             .textFieldStyle(.plain)
-            .font(.title2)
+            .font(usesTitleMenu ? .callout : .title2)
             .focused($searchFocused)
             .accessibilityLabel(tool == .launcher ? "Search apps" : "Search clips")
         if !query.isEmpty {
@@ -529,7 +545,14 @@ struct ToolbeltView: View {
         .padding(.vertical, Space.sm)
     }
 
-    var hint: String { ToolActions.hint(for: tool, model: model, surface: surface) }
+    var hint: String {
+        if toolMenuOpen, usesTitleMenu { return "↑↓←→ Choose   ↩ Open   esc Close" }
+        if let railHover {
+            let number = panelTools.firstIndex(of: railHover).flatMap { $0 < 9 ? "   ⌘\($0 + 1)" : nil } ?? ""
+            return "\(railHover.title): \(railHover.help)\(number)"
+        }
+        return ToolActions.hint(for: tool, model: model, surface: surface)
+    }
 
     // MARK: Data
 
@@ -665,6 +688,7 @@ struct ToolbeltView: View {
     // MARK: Actions
 
     func reset() {
+        toolMenuOpen = false
         WorldClock.shared.travel = 0
         model.pickingApps = false
         query = ""

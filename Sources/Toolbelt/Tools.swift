@@ -141,6 +141,7 @@ final class ToolPrefs {
     var showInDock: Bool { didSet { changed() } }
     /// Resting the pointer on a Toolbelt menu bar icon opens its window, like Notchy's notch.
     var openOnHover: Bool { didSet { changed() } }
+    var toolSwitcher: ToolSwitcherStyle { didSet { changed() } }
 
     /// Called after every change; AppDelegate applies it to the menu bar, shortcuts and Dock.
     @ObservationIgnored var onChange: (() -> Void)?
@@ -165,6 +166,7 @@ final class ToolPrefs {
         showMainIcon = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.showMainIcon") as? Bool ?? true)
         showInDock = Store.isOverridden ? false : UserDefaults.standard.bool(forKey: "tools.showInDock")
         openOnHover = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.openOnHover") as? Bool ?? true)
+        toolSwitcher = (Store.isOverridden ? nil : UserDefaults.standard.string(forKey: "tools.switcher")).flatMap(ToolSwitcherStyle.init(rawValue:)) ?? .titleMenu
     }
 
     /// Tools this version has that a saved order from an older version lacks.
@@ -203,6 +205,7 @@ final class ToolPrefs {
             defaults.set(showMainIcon, forKey: "tools.showMainIcon")
             defaults.set(showInDock, forKey: "tools.showInDock")
             defaults.set(openOnHover, forKey: "tools.openOnHover")
+            defaults.set(toolSwitcher.rawValue, forKey: "tools.switcher")
         }
         onChange?()
     }

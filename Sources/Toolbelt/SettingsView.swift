@@ -140,7 +140,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var summary: String {
         switch self {
         case .settings: "Permissions, menu bar, Dock and startup."
-        case .appearance: "The accent color for every tool."
+        case .appearance: "The accent color and how you switch tools."
         default: tool?.summary ?? ""
         }
     }
