@@ -166,7 +166,7 @@ final class ToolPrefs {
         showMainIcon = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.showMainIcon") as? Bool ?? true)
         showInDock = Store.isOverridden ? false : UserDefaults.standard.bool(forKey: "tools.showInDock")
         openOnHover = Store.isOverridden ? true : (UserDefaults.standard.object(forKey: "tools.openOnHover") as? Bool ?? true)
-        toolSwitcher = (Store.isOverridden ? nil : UserDefaults.standard.string(forKey: "tools.switcher")).flatMap(ToolSwitcherStyle.init(rawValue:)) ?? .titleMenu
+        toolSwitcher = (Store.isOverridden ? nil : UserDefaults.standard.string(forKey: "tools.switcher")).flatMap(ToolSwitcherStyle.init(rawValue:)) ?? .colorTiles
     }
 
     /// Tools this version has that a saved order from an older version lacks.

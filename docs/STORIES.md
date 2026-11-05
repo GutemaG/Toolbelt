@@ -522,15 +522,15 @@ UX:
 Status: done
 
 ### S-086 Choose how I switch tools
-As the user, I see the current tool's name beside the search field and click it for a menu of every tool with its name, or I choose in Settings to keep a column of tool icons down the left side instead.
+As the user, I switch tools with a color tile per tool under the search field; or I choose in Settings the tool's name beside the search field, which opens a menu of every tool, or a column of tool icons down the left side.
 Acceptance:
-- [self] The title menu is the starting choice.
-- [snap] panel-switcher-open shows every tool by name; panel-switcher-rail and popover-rail show the column; settings-appearance shows the choice.
-- [manual] A click on a tool, or beside the menu, closes it; hovering a rail icon names it in the footer; the choice survives a restart.
+- [self] Color tiles are the starting choice.
+- [snap] panel and popover shots show the tiles; panel-switcher-open shows every tool by name; panel-switcher-rail and popover-rail show the column; settings-appearance shows the choice.
+- [manual] A click on a tool, or beside the menu, closes it; hovering a tile or rail icon names it in the footer; the choice survives a restart.
 UX:
-- Flow: the tool's name or ⌘T -> arrows or pointer -> ↩ or click; ⌘1 to ⌘9 and Tab still switch directly
+- Flow: click a tile, or in Title Menu the tool's name or ⌘T -> arrows or pointer -> ↩ or click; ⌘1 to ⌘9 and Tab always switch directly
 - Surface: the shared panel and popover; Settings > Appearance
-- Words: "Switch tools with", "Title Menu", "Side Rail"
+- Words: "Switch tools with", "Color Tiles", "Title Menu", "Side Rail"
 Status: done
 
 ### S-071 Switch sound output

@@ -2,14 +2,77 @@ import SwiftUI
 
 /// How the popover and panel switch tools. People choose in Settings > Appearance.
 enum ToolSwitcherStyle: String, CaseIterable, Identifiable {
-    case titleMenu, sideRail
+    case colorTiles, titleMenu, sideRail
 
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .colorTiles: "Color Tiles"
         case .titleMenu: "Title Menu"
         case .sideRail: "Side Rail"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .colorTiles: "A tile for each tool, in its own color, under the search field."
+        case .titleMenu: "The tool's name beside the search field opens a menu of every tool (⌘T)."
+        case .sideRail: "A column of tool icons stays down the left side."
+        }
+    }
+}
+
+/// A tile per tool under the search field: tinted in the tool's color, filled
+/// when chosen. Hovering one names it in the footer. All on one row in the
+/// panel, two balanced rows in the narrower popover.
+struct ToolTiles: View {
+    let tools: [Tool]
+    let current: Tool
+    let surface: Surface
+    @Binding var hovered: Tool?
+    let pick: (Tool) -> Void
+
+    private var size: CGFloat { surface == .panel ? Space.section : Space.section + Space.xs }
+    private var gap: CGFloat { surface == .panel ? Space.xs : Space.sm }
+    private var perRow: Int { surface == .panel ? max(tools.count, 1) : max((tools.count + 1) / 2, 1) }
+
+    var body: some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.fixed(size), spacing: gap), count: perRow), spacing: gap) {
+            ForEach(Array(tools.enumerated()), id: \.element) { index, tool in
+                Button {
+                    pick(tool)
+                } label: {
+                    tile(tool)
+                }
+                .buttonStyle(.plain)
+                .onHover { inside in
+                    if inside { hovered = tool } else if hovered == tool { hovered = nil }
+                }
+                .help(tool.title + (index < 9 ? " (⌘\(index + 1))" : ""))
+                .accessibilityLabel(tool.title)
+                .accessibilityAddTraits(tool == current ? [.isSelected, .isButton] : .isButton)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Tools")
+    }
+
+    @ViewBuilder
+    private func tile(_ tool: Tool) -> some View {
+        if tool == current {
+            IconTile(symbol: tool.symbol, tint: tool.tint, size: size)
+        } else {
+            RoundedRectangle(cornerRadius: size * 0.25, style: .continuous)
+                .fill(tool.tint.opacity(tool == hovered ? 0.35 : 0.18))
+                .frame(width: size, height: size)
+                .overlay {
+                    Image(systemName: tool.symbol)
+                        .font(.system(size: size * 0.5, weight: .medium))
+                        .foregroundStyle(tool.tint)
+                }
+                .contentShape(.rect)
         }
     }
 }

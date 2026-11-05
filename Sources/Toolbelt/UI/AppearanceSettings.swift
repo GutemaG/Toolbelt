@@ -30,9 +30,7 @@ struct AppearanceSettings: View {
                 ForEach(ToolSwitcherStyle.allCases) { Text($0.title).tag($0) }
             } label: {
                 Text("Switch tools with")
-                Text(prefs.toolSwitcher == .titleMenu
-                     ? "The tool's name beside the search field opens a menu of every tool (⌘T)."
-                     : "A column of tool icons stays down the left side.")
+                Text(prefs.toolSwitcher.detail)
             }
         }
     }

@@ -88,7 +88,7 @@ enum SelfTest {
 
             // S-032, S-034 tool switches and panel order
             let prefs = ToolPrefs.shared
-            check("the tool switcher starts as the title menu", prefs.toolSwitcher == .titleMenu)
+            check("the tool switcher starts as color tiles", prefs.toolSwitcher == .colorTiles)
             check("every tool starts on and in the panel", prefs.panelTools == Tool.allCases)
             prefs.move(.clipboard, by: -1)
             check("Move Up reorders the panel", prefs.panelTools.first == .clipboard)

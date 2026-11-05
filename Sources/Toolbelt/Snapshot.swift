@@ -121,6 +121,7 @@ enum Snapshot {
             if only == nil || only?.contains("switcher") == true {
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    ToolPrefs.shared.toolSwitcher = .titleMenu
                     PanelController.shared.show(.worldClock)
                     try? await Task.sleep(for: .seconds(0.3))
                     if let open = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: .command, timestamp: 0,
@@ -136,7 +137,7 @@ enum Snapshot {
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/panel-switcher-rail-\(mode).png", window: PanelController.shared.panel)
                     PanelController.shared.hide()
-                    ToolPrefs.shared.toolSwitcher = .titleMenu
+                    ToolPrefs.shared.toolSwitcher = .colorTiles
                 }
             }
             // The banner and the tiles when time is up, without the chime.
@@ -178,6 +179,12 @@ enum Snapshot {
                     capture(to: "\(dir)/popover-rail-\(mode).png", window: window)
                 }
                 ToolPrefs.shared.toolSwitcher = .titleMenu
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/popover-titlemenu-\(mode).png", window: window)
+                }
+                ToolPrefs.shared.toolSwitcher = .colorTiles
                 window.orderOut(nil)
             }
             // The Markup window, on a drawn sample image that is deleted afterwards.

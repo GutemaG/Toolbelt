@@ -29,7 +29,7 @@ struct ToolbeltView: View {
     @State var toolMenuOpen = false
     /// The tool the arrow keys or the pointer are on in the open menu.
     @State var toolMenuIndex = 0
-    @State var railHover: Tool?
+    @State var hoveredTool: Tool?
     @FocusState var searchFocused: Bool
 
     var tool: Tool { fixedTool ?? model.tool }
@@ -41,7 +41,7 @@ struct ToolbeltView: View {
         VStack(spacing: 0) {
             HStack(spacing: 0) {
                 if usesRail {
-                    ToolRail(tools: panelTools, current: tool, hovered: $railHover) { model.tool = $0 }
+                    ToolRail(tools: panelTools, current: tool, hovered: $hoveredTool) { model.tool = $0 }
                     Divider()
                 }
                 VStack(spacing: 0) {
@@ -151,9 +151,19 @@ struct ToolbeltView: View {
 
     // MARK: Parts
 
-    var header: some View { searchRow }
+    var header: some View {
+        VStack(spacing: 0) {
+            searchRow
+            if usesTiles {
+                ToolTiles(tools: panelTools, current: tool, surface: surface, hovered: $hoveredTool) { model.tool = $0 }
+                    .padding(.horizontal, Space.lg)
+                    .padding(.bottom, Space.md)
+            }
+        }
+    }
 
     var showsPicker: Bool { fixedTool == nil && panelTools.count > 1 }
+    var usesTiles: Bool { showsPicker && ToolPrefs.shared.toolSwitcher == .colorTiles }
     var usesTitleMenu: Bool { showsPicker && ToolPrefs.shared.toolSwitcher == .titleMenu }
     var usesRail: Bool { showsPicker && ToolPrefs.shared.toolSwitcher == .sideRail }
     var toolMenuColumns: Int { surface == .panel ? 6 : 4 }
@@ -547,9 +557,9 @@ struct ToolbeltView: View {
 
     var hint: String {
         if toolMenuOpen, usesTitleMenu { return "↑↓←→ Choose   ↩ Open   esc Close" }
-        if let railHover {
-            let number = panelTools.firstIndex(of: railHover).flatMap { $0 < 9 ? "   ⌘\($0 + 1)" : nil } ?? ""
-            return "\(railHover.title): \(railHover.help)\(number)"
+        if let hoveredTool {
+            let number = panelTools.firstIndex(of: hoveredTool).flatMap { $0 < 9 ? "   ⌘\($0 + 1)" : nil } ?? ""
+            return "\(hoveredTool.title): \(hoveredTool.help)\(number)"
         }
         return ToolActions.hint(for: tool, model: model, surface: surface)
     }
