@@ -44,7 +44,7 @@ struct ToolbeltView: View {
                 Divider()
             }
             if tool == .worldClock {
-                LocalTimeRow()
+                LocalTimeRow(selected: selected < 0) { selected = -1 }
                 Divider()
             }
             if tool == .info {
@@ -60,7 +60,7 @@ struct ToolbeltView: View {
             }
             if tool == .worldClock {
                 Divider()
-                TimeTravelBar()
+                TimeTravelBar(city: chosenCity)
             }
             Divider()
             footer
@@ -81,6 +81,29 @@ struct ToolbeltView: View {
             if tool == .launcher { model.apps.refresh() }
         }
         .onChange(of: query) { selected = 0 }
+        // The chosen city stays chosen when the list changes order.
+        .onChange(of: WorldClock.shared.cities) { old, new in
+            guard query.isEmpty, old.indices.contains(selected), let index = new.firstIndex(of: old[selected]) else { return }
+            selected = index
+        }
+    }
+
+    /// The saved city highlighted in World Clock. nil means Local Time.
+    var chosenCity: WorldCity? {
+        let entries = flatEntries
+        guard entries.indices.contains(selected), case .city(let city) = entries[selected],
+              WorldClock.shared.cities.contains(city) else { return nil }
+        return city
+    }
+
+    /// In World Clock a click chooses a saved city, and hovering leaves the
+    /// highlight alone: the pointer crosses other cities on its way to the slider.
+    func rowClicked(_ entry: Entry, index: Int) {
+        if case .city(let city) = entry, WorldClock.shared.cities.contains(city) {
+            selected = index
+        } else {
+            activate(entry, plainText: false)
+        }
     }
 
     // MARK: Parts
@@ -214,8 +237,8 @@ struct ToolbeltView: View {
                             ForEach(Array(section.entries.enumerated()), id: \.element.id) { offset, entry in
                                 row(entry, selected: start + offset == selected)
                                     .contentShape(.rect)
-                                    .onTapGesture { activate(entry, plainText: false) }
-                                    .onHover { if $0 { selected = start + offset } }
+                                    .onTapGesture { rowClicked(entry, index: start + offset) }
+                                    .onHover { if $0, tool != .worldClock { selected = start + offset } }
                                     .contextMenu { menu(for: entry) }
                                     .reorderable(entry)
                             }

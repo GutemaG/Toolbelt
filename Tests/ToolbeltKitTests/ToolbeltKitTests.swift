@@ -476,6 +476,15 @@ private extension KnockDetector.Event {
     let segments = WorldClockRules.daySegments(now: now, in: utc)
     #expect(segments.first?.start == 0 && segments.last?.end == 1)
     for (a, b) in zip(segments, segments.dropFirst()) { #expect(a.end == b.start && a.period != b.period) }
+    // Each city's band shows its own day: the middle is now, 18:30 in New York and 08:30 in Tokyo.
+    func periodNow(_ zone: String) -> DayPeriod? {
+        WorldClockRules.daySegments(now: now, in: TimeZone(identifier: zone)!).first { $0.start <= 0.5 && 0.5 < $0.end }?.period
+    }
+    #expect(periodNow("America/New_York") == .edge)
+    #expect(periodNow("Asia/Tokyo") == .edge)
+    #expect(periodNow("UTC") == .night)
+    #expect(periodNow("Europe/Berlin") == .night)
+    #expect(periodNow("Asia/Kolkata") == .night)
     #expect(DayPeriod.at(hour: 9) == .work && DayPeriod.at(hour: 16) == .work)
     #expect(DayPeriod.at(hour: 8) == .edge && DayPeriod.at(hour: 21) == .edge)
     #expect(DayPeriod.at(hour: 22) == .night && DayPeriod.at(hour: 6) == .night)

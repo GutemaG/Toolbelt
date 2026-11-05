@@ -86,8 +86,9 @@ extension ToolbeltView {
         case (124, false) where tool == .worldClock && query.isEmpty: WorldClock.shared.nudge(1)  // Right: later
         case (125, true) where tool == .worldClock, (126, true) where tool == .worldClock: // Command-Down, Command-Up
             guard case .city(let city)? = current else { return false }
-            let offset = event.keyCode == 125 ? 1 : -1
-            if WorldClock.shared.move(city, by: offset) { selected += offset }
+            WorldClock.shared.move(city, by: event.keyCode == 125 ? 1 : -1)
+        case (126, false) where tool == .worldClock && selected <= 0: // Up from the first city: Local Time
+            selected = -1
         case (125, false): // Down: one row, or one grid row inside the pinned grid
             let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
             selected = min(selected + step, max(entries.count - 1, 0))

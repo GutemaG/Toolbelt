@@ -98,6 +98,15 @@ enum Snapshot {
                     WorldClock.shared.travel = 11.25 * 3600 // a long label, beside Reset
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/panel-worldClock-travel-\(mode).png", window: PanelController.shared.panel)
+                    // The real arrow key: Up from the first city chooses Local Time.
+                    WorldClock.shared.travel = 0
+                    if let up = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [], timestamp: 0,
+                                                 windowNumber: PanelController.shared.panel.windowNumber, context: nil,
+                                                 characters: "", charactersIgnoringModifiers: "", isARepeat: false, keyCode: 126) {
+                        NSApp.postEvent(up, atStart: false)
+                    }
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-worldClock-local-\(mode).png", window: PanelController.shared.panel)
                 }
                 WorldClock.shared.travel = 0
                 PanelController.shared.hide()

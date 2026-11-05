@@ -175,13 +175,17 @@ struct WorldCityRow: View {
                         .accessibilityHidden(true)
                 }
             } accessory: {
-                if clock.menuBarCity == city {
-                    Image(systemName: "menubar.rectangle")
-                        .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(Palette.accentText))
-                        .help("Showing in the menu bar")
-                        .accessibilityLabel("Showing in the menu bar")
-                }
-                if !clock.cities.contains(city) {
+                if clock.cities.contains(city) {
+                    let shown = clock.menuBarCity == city
+                    Button(shown ? "Remove from Menu Bar" : "Show in Menu Bar", systemImage: "menubar.rectangle") {
+                        clock.toggleMenuBar(city)
+                    }
+                    .labelStyle(.iconOnly)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(shown ? (selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(Palette.accentText))
+                                           : (selected ? AnyShapeStyle(Palette.onAccent.opacity(0.4)) : AnyShapeStyle(.tertiary)))
+                    .help(shown ? "Remove \(city.name) from the menu bar (↩)" : "Show \(city.name) in the menu bar (↩)")
+                } else {
                     Image(systemName: "plus.circle")
                         .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
                         .help("Add \(city.name)")
@@ -193,25 +197,41 @@ struct WorldCityRow: View {
 }
 
 /// Your own time, pinned above the cities, so the differences have a reference.
+/// Clicking it shows your own day on the slider.
 struct LocalTimeRow: View {
+    let selected: Bool
+    let select: () -> Void
+
     var body: some View {
         TimelineView(.everyMinute) { context in
-            ClockLine(name: "Local Time", zone: .autoupdatingCurrent, now: context.date) {
+            ClockLine(name: "Local Time", zone: .autoupdatingCurrent, now: context.date, selected: selected) {
                 Image(systemName: "location.fill")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
             } accessory: {
                 EmptyView()
             }
         }
-        .padding(.horizontal, Space.lg)
-        .padding(.vertical, Space.sm)
+        .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.primary))
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, Space.xs + 2)
+        .background {
+            if selected { RoundedRectangle(cornerRadius: 8).fill(Palette.accent) }
+        }
+        .contentShape(.rect)
+        .onTapGesture(perform: select)
+        .padding(.horizontal, Space.sm)
+        .padding(.vertical, Space.xs)
+        .help("Show your own day on the slider")
         .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(selected ? [.isSelected, .isButton] : .isButton)
+        .accessibilityAction(named: "Show on Slider", select)
     }
 }
 
-/// The slider that moves every clock on the page together, with a band above
-/// it showing work, morning and evening, and night here.
+/// The slider that moves every clock on the page together. Its band shows
+/// work, morning and evening, and night in the chosen city, or here without one.
 struct TimeTravelBar: View {
+    let city: WorldCity?
     private var clock: WorldClock { .shared }
 
     var body: some View {
@@ -223,6 +243,10 @@ struct TimeTravelBar: View {
                         .monospacedDigit()
                         .fixedSize()
                     Spacer(minLength: Space.sm)
+                    Text(city.map { "\($0.flag) Day in \($0.name)" } ?? "Your Day")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
                     if clock.travel != 0 {
                         Button("Reset") { clock.travel = 0 }
                             .buttonStyle(.borderless)
@@ -233,7 +257,7 @@ struct TimeTravelBar: View {
                 }
                 .frame(minHeight: Space.xl)
                 DayBandSlider(value: Binding(get: { clock.travel }, set: { clock.travel = $0 }),
-                              segments: WorldClockRules.daySegments(now: context.date, in: .autoupdatingCurrent))
+                              segments: WorldClockRules.daySegments(now: context.date, in: city?.timeZone ?? .autoupdatingCurrent))
                     .help("Drag to see every clock earlier or later")
                     .accessibilityLabel("Time from now")
                     .accessibilityValue(WorldClockRules.travelLabel(clock.travel))
