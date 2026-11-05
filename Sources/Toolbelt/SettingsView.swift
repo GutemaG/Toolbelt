@@ -443,12 +443,7 @@ struct ToolSettings: View {
         case .system:
             SystemOptions()
         case .info:
-            Section {
-            } footer: {
-                Text("Info opens on Battery; switch tabs with ← and →. Serial numbers, hardware addresses and the public IP stay hidden until you click the eye. The public IP is looked up at api.ipify.org when Network opens, and the Wi-Fi name needs Location Services, asked only when you click it.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            InfoOptions()
         case .toggles:
             Section {
             } footer: {

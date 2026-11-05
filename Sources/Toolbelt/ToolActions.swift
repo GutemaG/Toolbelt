@@ -175,7 +175,10 @@ enum ToolActions {
         case .knock: return "Knock on the palm rest, lid or desk   Typing is ignored"
         case .mixer: return "↑↓ Choose   ←→ Volume   ↩ Mute   Right-click to reset"
         case .camera: return "↩ Take Photo   M Mirror   The camera turns off when this closes"
-        case .info: return "←→ Switch Tabs   Click a value to copy it   ⌘R Refresh"
+        case .info:
+            if MacInfo.shared.showsGrid { return "←→ Choose   ↩ Open   ⌘R Refresh" }
+            let back = MacInfo.shared.layout == .overview ? "Esc Back   " : ""
+            return back + "←→ Switch Tabs   Click a value to copy it   ⌘R Refresh"
         case .system: return "↩ Bring to Front   Right-click to quit   Energy over the last 6 seconds"
         case .sound: return "↩ Switch output   The highlighted one is playing now"
         case .timer:

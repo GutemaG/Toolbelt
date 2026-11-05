@@ -1,5 +1,6 @@
 import AppKit
 import CoreLocation
+import SwiftUI
 import ToolbeltKit
 
 /// Info: details about this Mac in five tabs. It opens on Battery.
@@ -28,8 +29,47 @@ enum InfoTab: String, CaseIterable, Identifiable {
         }
     }
 
+    /// A color per tab, like the tool tiles.
+    var tint: Color {
+        switch self {
+        case .battery: .green
+        case .storage: .purple
+        case .hardware: .blue
+        case .network: .teal
+        case .developer: .orange
+        }
+    }
+
     /// Tabs whose values change while you watch are read every time they show.
     var isLive: Bool { self == .battery || self == .network }
+}
+
+/// How Info lays out its tabs. People choose in Settings > Info.
+enum InfoLayout: String, CaseIterable, Identifiable {
+    case overview, gauges, glance, list
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .overview: "Overview Grid"
+        case .gauges: "Gauge Cards"
+        case .glance: "Glance Tabs"
+        case .list: "Simple List"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .overview: "A card for each area opens on its details."
+        case .gauges: "A gauge and four cards for each tab, with the rest a click away."
+        case .glance: "Tabs that show their own value, above the details."
+        case .list: "Tabs above the details."
+        }
+    }
+
+    /// Layouts that show a value from every tab read them all on opening.
+    var readsEveryTab: Bool { self == .overview || self == .glance }
 }
 
 /// One line: a name and its value. Secret values (serial numbers, the
@@ -67,15 +107,85 @@ final class MacInfo {
     private(set) var sections: [InfoTab: [InfoSection]] = [:]
     private(set) var loading: Set<InfoTab> = []
 
+    var layout: InfoLayout = (Store.isOverridden ? nil : UserDefaults.standard.string(forKey: "info.layout")).flatMap(InfoLayout.init(rawValue:)) ?? .overview {
+        didSet {
+            if !Store.isOverridden { UserDefaults.standard.set(layout.rawValue, forKey: "info.layout") }
+            detailOpen = false
+            loadVisible()
+        }
+    }
+    /// Overview Grid: a card's details are open instead of the grid.
+    private(set) var detailOpen = false
+
+    var showsGrid: Bool { layout == .overview && !detailOpen }
+
+    /// The public IP takes a web request, so it waits until Network itself is
+    /// open. Reading every tab for the cards doesn't count.
+    var wantsPublicIP: Bool { tab == .network && !showsGrid }
+
+    /// The self-test turns this off so it never contacts the internet.
+    var mayLookUpPublicIP = true
+
     /// Reads a tab. Live tabs read again each time; the others once, or on Refresh.
     func load(_ tab: InfoTab, force: Bool = false) {
         guard force || tab.isLive || sections[tab] == nil, !loading.contains(tab) else { return }
         loading.insert(tab)
-        let options = InfoReader.Options(locationAllowed: LocationAccess.shared.isAllowed, lookUpPublicIP: true)
+        let lookUp = tab == .network && wantsPublicIP
+        let options = InfoReader.Options(locationAllowed: LocationAccess.shared.isAllowed, lookUpPublicIP: lookUp && mayLookUpPublicIP)
         Task {
             let result = await InfoReader.read(tab, options: options)
             sections[tab] = result
             loading.remove(tab)
+            // Network opened during a read that left the public IP out.
+            if tab == .network, wantsPublicIP, !lookUp { load(.network, force: true) }
+        }
+    }
+
+    /// Every time Info opens it starts on Battery, and the grid if that's the layout.
+    func opened() {
+        detailOpen = false
+        tab = .battery
+        load(.battery, force: true)
+        loadVisible()
+    }
+
+    private func loadVisible() {
+        load(tab)
+        if layout.readsEveryTab { InfoTab.allCases.forEach { load($0) } }
+    }
+
+    /// ⌘R and the Refresh button: the grid reads every card, the others this tab.
+    func refresh() {
+        if showsGrid {
+            InfoTab.allCases.forEach { load($0, force: true) }
+        } else {
+            load(tab, force: true)
+        }
+    }
+
+    /// Overview Grid: open a card.
+    func open(_ tab: InfoTab) {
+        detailOpen = true
+        self.tab = tab
+        load(tab)
+    }
+
+    /// Overview Grid: back to the cards. False when they're already showing.
+    func closeDetail() -> Bool {
+        guard detailOpen else { return false }
+        detailOpen = false
+        return true
+    }
+
+    /// Sections with the rows that match the search. A matching section title keeps all its rows.
+    func filtered(_ tab: InfoTab, query: String) -> [InfoSection] {
+        let all = sections[tab] ?? []
+        guard !query.trimmingCharacters(in: .whitespaces).isEmpty else { return all }
+        return all.compactMap { section in
+            if ClipRules.matches(query, text: section.title) { return section }
+            var copy = section
+            copy.rows = section.rows.filter { ClipRules.matches(query, text: $0.label) || (!$0.secret && ClipRules.matches(query, text: $0.value)) }
+            return copy.rows.isEmpty ? nil : copy
         }
     }
 

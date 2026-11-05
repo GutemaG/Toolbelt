@@ -56,20 +56,34 @@ enum Snapshot {
                 }
                 model.pickingApps = false
             }
-            // Info's other tabs, once each has been read.
+            // Info: each layout, once every tab has been read.
             if only == nil || only?.contains("info") == true {
+                @MainActor func settled() async {
+                    for _ in 0..<40 where !MacInfo.shared.loading.isEmpty {
+                        try? await Task.sleep(for: .seconds(0.25))
+                    }
+                    try? await Task.sleep(for: .seconds(0.5))
+                }
                 for mode in ["light", "dark"] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     PanelController.shared.show(.info)
-                    try? await Task.sleep(for: .seconds(0.5))
-                    for tab in InfoTab.allCases.dropFirst() {
-                        MacInfo.shared.tab = tab
-                        for _ in 0..<40 where MacInfo.shared.loading.contains(tab) || MacInfo.shared.sections[tab] == nil {
-                            try? await Task.sleep(for: .seconds(0.25))
-                        }
-                        try? await Task.sleep(for: .seconds(0.5))
+                    await settled()
+                    capture(to: "\(dir)/panel-info-overview-\(mode).png", window: PanelController.shared.panel)
+                    for tab in InfoTab.allCases {
+                        MacInfo.shared.open(tab)
+                        await settled()
                         capture(to: "\(dir)/panel-info-\(tab.rawValue)-\(mode).png", window: PanelController.shared.panel)
                     }
+                    for layout in [InfoLayout.gauges, .glance, .list] {
+                        MacInfo.shared.layout = layout
+                        for tab in InfoTab.allCases {
+                            MacInfo.shared.tab = tab
+                            await settled()
+                            capture(to: "\(dir)/panel-info-\(layout.rawValue)-\(tab.rawValue)-\(mode).png", window: PanelController.shared.panel)
+                        }
+                    }
+                    MacInfo.shared.layout = .overview
+                    PanelController.shared.hide()
                 }
             }
             PanelController.shared.hide()
@@ -192,6 +206,31 @@ enum Snapshot {
                     model.tool = tool
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/popover-\(tool.rawValue)-\(mode).png", window: window)
+                }
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    model.tool = .info
+                    for layout in InfoLayout.allCases {
+                        MacInfo.shared.layout = layout
+                        for tab in [InfoTab.battery, .network] {
+                            if layout != .overview { MacInfo.shared.tab = tab }
+                            try? await Task.sleep(for: .seconds(1.5))
+                            capture(to: "\(dir)/popover-info-\(layout.rawValue)-\(tab.rawValue)-\(mode).png", window: window)
+                        }
+                    }
+                    MacInfo.shared.layout = .overview
+                    MacInfo.shared.open(.battery)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/popover-info-detail-\(mode).png", window: window)
+                    _ = MacInfo.shared.closeDetail()
+                    // Searching from the grid looks through every area.
+                    let search = NSHostingView(rootView: InfoView(surface: .popover, query: "serial").environment(model).themed())
+                    let results = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 320), styleMask: [.titled], backing: .buffered, defer: false)
+                    results.contentView = search
+                    results.orderFrontRegardless()
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/popover-info-search-\(mode).png", window: results)
+                    results.orderOut(nil)
                 }
                 ToolPrefs.shared.toolSwitcher = .sideRail
                 for mode in ["light", "dark"] {

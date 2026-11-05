@@ -375,6 +375,47 @@ enum SelfTest {
             check("Developer finds installed tools with versions", developer.contains { $0.label == "Git" && $0.value.first?.isNumber == true },
                   "\(developer.count) in \(String(format: "%.1f", Date.now.timeIntervalSince(started))) s: " + developer.prefix(6).map { "\($0.label) \($0.value)" }.joined(separator: ", "))
 
+            // S-087 Info layouts: Overview Grid first, and no public IP lookup for the cards
+            let info = MacInfo.shared
+            info.mayLookUpPublicIP = false
+            check("Info starts as the Overview Grid", info.layout == .overview && info.showsGrid)
+            info.tab = .network
+            check("the grid never asks for the public IP, even on the Network card", !info.wantsPublicIP)
+            info.open(.network)
+            check("opening the Network card asks for the public IP", info.wantsPublicIP && !info.showsGrid)
+            check("Escape goes back to the grid, then has nothing left to close", info.closeDetail() && info.showsGrid && !info.closeDetail())
+            info.open(.storage)
+            info.opened()
+            check("opening Info again starts on the grid and Battery", info.showsGrid && info.tab == .battery)
+            info.layout = .gauges
+            info.tab = .network
+            check("Gauge Cards ask for the public IP when Network is the tab", info.wantsPublicIP)
+            info.tab = .battery
+            info.layout = .overview
+            let sampleBattery = [InfoSection(title: "Now", rows: [InfoRow(label: "Charge", value: "80%", fraction: 0.8), InfoRow(label: "Status", value: "Not charging (on power)"), InfoRow(label: "Low Power Mode", value: "Off")]),
+                                 InfoSection(title: "Health", rows: [InfoRow(label: "Condition", value: "Normal"), InfoRow(label: "Cycle count", value: "6")])]
+            let batteryCard = InfoSummary.make(.battery, sections: sampleBattery)
+            check("the Battery card reads charge and status", batteryCard?.stat == "80%" && batteryCard?.caption == "Not charging" && batteryCard?.subtitle == "On power · Low Power Mode off",
+                  batteryCard?.subtitle ?? "none")
+            let storageCard = InfoSummary.make(.storage, sections: [InfoSection(title: "Macintosh HD", rows: [InfoRow(label: "Used", value: "578 GB of 1 TB", fraction: 0.58), InfoRow(label: "Available", value: "422 GB")])])
+            check("the Storage card reads what's free", storageCard?.stat == "422 GB" && storageCard?.caption == "free of 1 TB" && storageCard?.fraction == 0.58)
+            let largeDisk = InfoSummary.make(.storage, sections: [InfoSection(title: "Macintosh HD", rows: [InfoRow(label: "Used", value: "339 GB of 994.61 GB"), InfoRow(label: "Available", value: "655.69 GB")])])
+            check("cards round long sizes to fit", largeDisk?.stat == "656 GB" && largeDisk?.caption == "free of 995 GB")
+            let offlineCard = InfoSummary.make(.network, sections: [InfoSection(title: "Internet", rows: [InfoRow(label: "Status", value: "Not connected")])])
+            check("the Network card says when it's offline", offlineCard?.stat == "Offline" && offlineCard?.headline == "Not connected")
+            check("a tab with no rows has no card values", InfoSummary.make(.battery, sections: []) == nil)
+            let hardwareCard = InfoSummary.make(.hardware, sections: await InfoReader.read(.hardware, options: offline))
+            check("the real Hardware card names the chip and four values", hardwareCard?.stat.isEmpty == false && hardwareCard?.highlights.count == 4, hardwareCard?.stat ?? "none")
+            let networkCard = InfoSummary.make(.network, sections: await InfoReader.read(.network, options: offline))
+            check("secret rows stay secret on cards", networkCard?.highlights.filter { $0.label == "Public IP" }.allSatisfy(\.secret) == true)
+            let devSections = await InfoReader.read(.developer, options: offline)
+            let toolRows = devSections.filter { DevTool.Group(rawValue: $0.title) != nil }.flatMap(\.rows).map(\.label)
+            check("each developer tool shows once, in its own group", Set(toolRows).count == toolRows.count, toolRows.joined(separator: ", "))
+            let devCard = InfoSummary.make(.developer, sections: devSections)
+            check("the Developer card counts only its tools", devCard?.stat == "\(toolRows.count) tool\(toolRows.count == 1 ? "" : "s")", devCard?.stat ?? "none")
+            let unnamed = InfoSummary.make(.hardware, sections: [InfoSection(title: "macOS", rows: [InfoRow(label: "Name", value: "macOS 27"), InfoRow(label: "Version", value: "27.0.1")])])
+            check("a macOS without a name doesn't repeat its version", unnamed?.subtitle == "Mac · macOS 27.0.1", unnamed?.subtitle ?? "none")
+
             // S-076 System: read only, nothing is quit
             let sensors = SystemSensors()
             _ = await sensors.read(processes: true)

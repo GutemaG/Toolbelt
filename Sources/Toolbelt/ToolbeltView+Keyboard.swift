@@ -92,7 +92,9 @@ extension ToolbeltView {
         switch (event.keyCode, flags.contains(.command)) {
         case (123, false) where tool == .info && query.isEmpty: MacInfo.shared.step(-1) // Left: previous Info tab
         case (124, false) where tool == .info && query.isEmpty: MacInfo.shared.step(1)  // Right: next Info tab
-        case (15, true) where tool == .info: MacInfo.shared.load(MacInfo.shared.tab, force: true) // Command-R
+        case (15, true) where tool == .info: MacInfo.shared.refresh() // Command-R
+        case (36, _) where tool == .info && MacInfo.shared.showsGrid && query.isEmpty, (76, _) where tool == .info && MacInfo.shared.showsGrid && query.isEmpty:
+            MacInfo.shared.open(MacInfo.shared.tab) // Return opens the chosen card
         case (36, _) where tool == .camera, (76, _) where tool == .camera: model.photoCount += 1 // Return takes a photo
         case (46, false) where tool == .camera: Camera.toggleMirror() // M
         case (125, false) where tool == .mixer: VolumeMixer.shared.step(1, in: VolumeMixerView.shown(query))   // Down
@@ -124,6 +126,7 @@ extension ToolbeltView {
             if !query.isEmpty { query = "" }
             else if model.pickingApps { stopPicking() }
             else if tool == .worldClock, WorldClock.shared.travel != 0 { WorldClock.shared.travel = 0 }
+            else if tool == .info, MacInfo.shared.closeDetail() { }
             else { close() }
         case (48, false) where fixedTool == nil && panelTools.count > 1: // Tab switches tool
             let index = panelTools.firstIndex(of: model.tool) ?? 0

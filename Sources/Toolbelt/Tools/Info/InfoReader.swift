@@ -489,7 +489,7 @@ nonisolated enum InfoReader {
 
         var sections: [InfoSection] = []
         for group in DevTool.Group.allCases {
-            let rows = DevTool.all.compactMap { tool in
+            let rows = DevTool.all.filter { $0.group == group }.compactMap { tool in
                 found.first { $0.0 == tool }.map { InfoRow(label: tool.name, value: $0.1, help: $0.2) }
             }
             if !rows.isEmpty { sections.append(InfoSection(title: group.rawValue, rows: rows)) }

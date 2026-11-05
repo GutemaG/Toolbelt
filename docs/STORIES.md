@@ -533,6 +533,19 @@ UX:
 - Words: "Switch tools with", "Color Tiles", "Title Menu", "Side Rail"
 Status: done
 
+### S-087 See my Mac at a glance in Info, in the layout I like
+As the user, I open Info on a card for each area, with its main value, and click one for its details; or I choose in Settings > Info tabs with a gauge and four cards, tabs that show their own values, or a simple list.
+Acceptance:
+- [self] The Overview Grid is the starting choice; opening Info starts on the grid and Battery; Escape goes back; the grid never asks for the public IP, and opening Network does; cards read their values and say when there are none; secret rows stay secret.
+- [snap] panel-info-overview, panel-info-<tab>, panel-info-<layout>-<tab>, popover-info-<layout>-<tab>, popover-info-detail; settings-info shows the choice.
+- [manual] Clicking a card opens it; clicking a stat card copies its value; ←, →, ↩ and Esc work on the grid; the choice survives a restart.
+UX:
+- Flow: Overview Grid: card or ←→ ↩ -> details -> ←→ another area, Esc or the back button -> grid. Search looks through all five areas from the grid.
+- Surface: the shared panel and popover; Settings > Info
+- States: a spinner on a card while it reads; "No Battery" on desktops; "Offline" on Network with no connection
+- Words: "Layout", "Overview Grid", "Gauge Cards", "Glance Tabs", "Simple List", "Show All Details"
+Status: done
+
 ### S-071 Switch sound output
 As the user, I pick speakers, headphones or AirPods from Sound, or mute, without opening Control Center.
 Status: done
