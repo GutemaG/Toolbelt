@@ -87,6 +87,12 @@ enum Snapshot {
                 }
                 window.orderOut(nil)
             }
+            // The city's time beside the Toolbelt icon.
+            if only == nil || only?.contains("worldClock") == true {
+                PanelController.shared.hide()
+                try? await Task.sleep(for: .seconds(0.3))
+                captureScreen(to: "\(dir)/menubar-worldClock.png", around: StatusItems.shared?.mainWindow)
+            }
             // The menu bar popover's width, where the tool picker wraps onto two rows.
             if only == nil || only?.contains("popover") == true {
                 let host = NSHostingView(rootView: ToolbeltView(surface: .popover)
@@ -141,6 +147,19 @@ enum Snapshot {
             print("SNAPSHOT done \(dir)")
             NSApp.terminate(nil)
         }
+    }
+
+    /// Captures the part of the screen a menu bar icon sits on. Asking for its
+    /// window by number gives nothing, so this takes the area instead.
+    private static func captureScreen(to path: String, around window: NSWindow?) {
+        guard let frame = window?.frame, let height = NSScreen.screens.first?.frame.height else { return }
+        let shot = Process()
+        shot.executableURL = URL(fileURLWithPath: "/usr/sbin/screencapture")
+        // screencapture counts from the top of the screen.
+        shot.arguments = ["-x", "-R", "\(Int(frame.minX)),\(Int(height - frame.maxY)),\(Int(frame.width)),\(Int(frame.height))", path]
+        try? shot.run()
+        shot.waitUntilExit()
+        print("SNAPSHOT \(path)")
     }
 
     /// Captures the real window with screencapture, so glass and materials

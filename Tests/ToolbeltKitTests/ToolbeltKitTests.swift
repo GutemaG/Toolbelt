@@ -399,3 +399,39 @@ private extension KnockDetector.Event {
     #expect(KnockRules.slot(count: 3, side: .right, layout: .sides).title == "3 knocks, right")
     #expect(Set(KnockAppRule.suggested.map(\.rule.id)).count == KnockAppRule.suggested.count)
 }
+
+@Test func worldClockFindsCities() {
+    let newYork = WorldClockRules.city(named: "New York")!
+    #expect(newYork.zone == "America/New_York")
+    #expect(WorldClockRules.city(named: "San Francisco")?.zone == "America/Los_Angeles")
+    #expect(WorldClockRules.search("new york").first == newYork)
+    #expect(WorldClockRules.search("newyork").first == newYork)
+    #expect(WorldClockRules.search("tok").first?.name == "Tokyo")
+    #expect(WorldClockRules.search("zzzz").isEmpty)
+    #expect(WorldClockRules.suggested.count == 10)
+    #expect(!WorldClockRules.search("", excluding: [newYork]).contains(newYork))
+    #expect(Set(WorldClockRules.catalog.map(\.name)).count == WorldClockRules.catalog.count)
+    #expect(WorldCity(id: newYork.id) == newYork)
+    #expect(WorldCity(id: "Nowhere/Land|Atlantis") == nil)
+    #expect(WorldCity(id: "no bar") == nil)
+}
+
+@Test func worldClockWritesTimes() {
+    // 2026-01-15 23:30 UTC: winter, so New York is UTC-5 and Tokyo is the next day.
+    let date = Date(timeIntervalSince1970: 1_768_519_800)
+    let utc = TimeZone(identifier: "UTC")!
+    let newYork = WorldCity(name: "New York", zone: "America/New_York")
+    let tokyo = WorldCity(name: "Tokyo", zone: "Asia/Tokyo")
+    let kolkata = WorldCity(name: "Mumbai", zone: "Asia/Kolkata")
+    #expect(WorldClockRules.time(newYork, at: date, locale: Locale(identifier: "en_GB")) == "18:30")
+    #expect(WorldClockRules.time(tokyo, at: date, locale: Locale(identifier: "en_GB")) == "08:30")
+    #expect(WorldClockRules.detail(newYork, at: date, here: utc) == "5 h behind")
+    #expect(WorldClockRules.detail(tokyo, at: date, here: utc) == "Tomorrow, 9 h ahead")
+    #expect(WorldClockRules.detail(kolkata, at: date, here: utc) == "Tomorrow, 5 h 30 min ahead")
+    #expect(WorldClockRules.detail(newYork, at: date, here: newYork.timeZone) == "Same time as here")
+    #expect(WorldClockRules.detail(WorldCity(name: "London", zone: "Europe/London"), at: date, here: tokyo.timeZone) == "Yesterday, 9 h behind")
+    // Summer moves New York to UTC-4.
+    #expect(WorldClockRules.detail(newYork, at: date.addingTimeInterval(182 * 86_400), here: utc) == "4 h behind")
+    #expect(WorldClockRules.secondsToNextMinute(Date(timeIntervalSince1970: 120)) == 60)
+    #expect(WorldClockRules.secondsToNextMinute(Date(timeIntervalSince1970: 170)) == 10)
+}

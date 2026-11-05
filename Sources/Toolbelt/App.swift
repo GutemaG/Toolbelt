@@ -119,7 +119,9 @@ final class StatusItems {
             main?.remove()
             main = nil
         }
-        let wanted = Set(Tool.allCases.filter { prefs.enabled.contains($0) && prefs.ownIcon.contains($0) })
+        var wanted = Set(Tool.allCases.filter { prefs.enabled.contains($0) && prefs.ownIcon.contains($0) })
+        // With the Toolbelt icon hidden, the city in the menu bar still needs an icon to sit on.
+        if main == nil, WorldClock.shared.menuBarText != nil { wanted.insert(.worldClock) }
         for (tool, controller) in tools where !wanted.contains(tool) {
             controller.remove()
             tools[tool] = nil
@@ -128,6 +130,7 @@ final class StatusItems {
             tools[tool] = StatusItemController(model: model, tool: tool)
         }
         refreshIcons()
+        WorldClock.shared.updateTicking()
     }
 
     func closePopovers() {
@@ -138,16 +141,24 @@ final class StatusItems {
     /// Keep Awake's own icon fills while it is on.
     func refreshIcons() {
         tools[.keepAwake]?.setSymbol(KeepAwake.shared.isOn ? "cup.and.saucer.fill" : Tool.keepAwake.symbol)
-        // The time left sits on the Timer's own icon, or on the Toolbelt icon without one.
-        let text = TimerTool.shared?.menuBarText
-        if let timerItem = tools[.timer] {
-            timerItem.setTitle(text)
-            main?.setTitle(nil)
-        } else {
-            main?.setTitle(text)
+        // The city's time and the time left sit on their tool's own icon, or
+        // side by side on the Toolbelt icon without one.
+        var onMain: [String] = []
+        for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText)] {
+            if let item = tools[tool] {
+                item.setTitle(text)
+            } else if let text {
+                onMain.append(text)
+            }
         }
+        main?.setTitle(onMain.isEmpty ? nil : onMain.joined(separator: "   "))
         tools[.system]?.setTitle(SystemMonitor.shared.menuBarText)
     }
+
+    /// What the Toolbelt icon shows beside it, for the self-test.
+    var mainTitle: String { main?.title ?? "" }
+    /// The window holding the Toolbelt icon, for snapshots.
+    var mainWindow: NSWindow? { main?.window }
 
     /// Shows the Toolbelt popover, or the first tool icon when it is hidden.
     func showMainPopover() {
@@ -203,6 +214,9 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         item.length = text == nil ? NSStatusItem.squareLength : NSStatusItem.variableLength
         if text != nil { button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular) }
     }
+
+    var title: String { item.button?.title ?? "" }
+    var window: NSWindow? { item.button?.window }
 
     func setSymbol(_ symbol: String) {
         item.button?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: tool?.title ?? "Toolbelt")

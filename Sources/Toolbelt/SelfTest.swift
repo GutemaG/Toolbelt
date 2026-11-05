@@ -171,6 +171,25 @@ enum SelfTest {
                 check("a redaction turns its pixels black", bytes[offset] < 20 && bytes[offset + 1] < 20 && bytes[offset + 2] < 20)
             }
 
+            // S-083 world clock: the real menu bar icon follows the chosen city
+            let clock = WorldClock.shared
+            let newYork = WorldClockRules.city(named: "New York")!, tokyo = WorldClockRules.city(named: "Tokyo")!
+            clock.add(newYork)
+            check("the first city goes in the menu bar", clock.menuBarCity == newYork)
+            check("the menu bar shows its name and time", StatusItems.shared?.mainTitle.contains("New York") == true && StatusItems.shared?.mainTitle.contains(":") == true,
+                  StatusItems.shared?.mainTitle ?? "no icon")
+            clock.add(tokyo)
+            check("another city leaves the menu bar alone", clock.menuBarCity == newYork && clock.cities.count == 2)
+            clock.toggleMenuBar(tokyo)
+            check("choosing a city switches the menu bar", StatusItems.shared?.mainTitle.contains("Tokyo") == true)
+            ToolPrefs.shared.enabled.remove(.worldClock)
+            StatusItems.shared?.apply(ToolPrefs.shared)
+            check("turning World Clock off clears the menu bar", StatusItems.shared?.mainTitle == "")
+            ToolPrefs.shared.enabled.insert(.worldClock)
+            clock.remove(tokyo)
+            check("removing the city clears the menu bar", clock.menuBarCity == nil && StatusItems.shared?.mainTitle == "")
+            clock.remove(newYork)
+
             // S-061 Keep Awake
             KeepAwake.shared.start(for: 60)
             check("Keep Awake holds a power assertion", KeepAwake.shared.isOn && model.awakeUntil != nil)

@@ -60,6 +60,7 @@ struct SettingsView: View {
             case .camera: ToolSettings(tool: .camera)
             case .windows: ToolSettings(tool: .windows)
             case .timer: ToolSettings(tool: .timer)
+            case .worldClock: ToolSettings(tool: .worldClock)
             case .sound: ToolSettings(tool: .sound)
             case .mixer: ToolSettings(tool: .mixer)
             case .toggles: ToolSettings(tool: .toggles)
@@ -95,7 +96,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, knock, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, worldClock, sound, mixer, toggles, knock, system, info, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -107,7 +108,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .launcher, .clipboard, .snippets: .input
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
-        case .timer, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
+        case .timer, .worldClock, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -469,6 +470,8 @@ struct ToolSettings: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
+        case .worldClock:
+            WorldClockOptions()
         case .recording:
             RecordingOptions()
         case .clipboard:

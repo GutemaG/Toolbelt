@@ -162,6 +162,7 @@ struct ToolbeltView: View {
         case .recording: return "Search Recordings"
         case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
         case .mixer: return "Search Apps"
+        case .worldClock: return "Search Cities"
         default: return "Search \(tool.title)"
         }
     }
@@ -295,6 +296,8 @@ struct ToolbeltView: View {
                 Spacer(minLength: 0)
             case .usage(let use):
                 UsageRow(use: use, icon: model.apps.icon(for: use.path), selected: selected)
+            case .city(let city):
+                WorldCityRow(city: city, selected: selected)
             case .add, .action:
                 EmptyView()
             }
@@ -308,7 +311,7 @@ struct ToolbeltView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(selected ? .isSelected : [])
-        .accessibilityAction(named: entry.isApp ? "Open" : entry.isUsage ? "Bring to Front" : (surface == .panel ? "Paste" : "Copy")) {
+        .accessibilityAction(named: entry.isApp ? "Open" : entry.isUsage ? "Bring to Front" : entry.isCity ? "Add or Show in Menu Bar" : (surface == .panel ? "Paste" : "Copy")) {
             activate(entry, plainText: false)
         }
     }
@@ -434,6 +437,16 @@ struct ToolbeltView: View {
             }
             Button("Show in Finder") { NSWorkspace.shared.activateFileViewerSelecting([URL(fileURLWithPath: use.path)]) }
             Button("Open Activity Monitor") { close(); monitor.openActivityMonitor() }
+        case .city(let city):
+            let clock = WorldClock.shared
+            if clock.cities.contains(city) {
+                Button(clock.menuBarCity == city ? "Remove from Menu Bar" : "Show in Menu Bar") { clock.toggleMenuBar(city) }
+                Divider()
+                Button("Remove City", role: .destructive) { clock.remove(city) }
+                    .keyboardShortcut(.delete)
+            } else {
+                Button("Add City") { activate(entry, plainText: false) }
+            }
         }
     }
 
@@ -493,6 +506,8 @@ struct ToolbeltView: View {
         case snippet(Snippet)
         /// An app in System's energy list.
         case usage(AppUse)
+        /// A city in World Clock, saved or ready to add.
+        case city(WorldCity)
 
         var id: String {
             switch self {
@@ -504,11 +519,13 @@ struct ToolbeltView: View {
             case .snippet(let snippet): "s:" + snippet.uuid.uuidString
             case .capture(let capture): "f:" + capture.uuid.uuidString
             case .usage(let use): "u:" + use.path
+            case .city(let city): "w:" + city.id
             }
         }
 
         var isApp: Bool { if case .app = self { true } else { false } }
         var isUsage: Bool { if case .usage = self { true } else { false } }
+        var isCity: Bool { if case .city = self { true } else { false } }
     }
 
     struct Section {
@@ -587,6 +604,12 @@ struct ToolbeltView: View {
             case .colors:
                 let recent = model.recentColors.filter { query.isEmpty || ClipRules.matches(query, text: $0) }
                 if !recent.isEmpty { result.append(Section(title: "Recent", entries: recent.map(Entry.color))) }
+            case .worldClock:
+                let clock = WorldClock.shared
+                let saved = clock.cities.filter { FuzzyMatch.match(query, in: $0.name) != nil }
+                if !saved.isEmpty { result.append(Section(title: "Your Cities", entries: saved.map(Entry.city))) }
+                let more = WorldClockRules.search(query, excluding: clock.cities)
+                if !more.isEmpty { result.append(Section(title: "Add a City", entries: more.map(Entry.city))) }
             default:
                 break
             }
@@ -643,6 +666,15 @@ struct ToolbeltView: View {
         case .usage(let use):
             close()
             SystemMonitor.shared.bringToFront(use)
+        case .city(let city):
+            let clock = WorldClock.shared
+            if clock.cities.contains(city) {
+                clock.toggleMenuBar(city)
+            } else {
+                clock.add(city)
+                query = ""
+                selected = 0
+            }
         case .add:
             query = ""
             selected = 0

@@ -1,5 +1,6 @@
 import AppKit
 import SwiftData
+import ToolbeltKit
 
 /// Sample data for snapshots: APP_SEED=1 with APP_STORE in /tmp fills an empty
 /// store with realistic clips and launch counts.
@@ -61,6 +62,9 @@ enum SeedData {
         let pinned = ["/Applications/Claude.app", "/Applications/Ghostty.app", "/Applications/Visual Studio Code.app",
                       "/Applications/Telegram.app", "/System/Applications/Calendar.app"]
         model.pinApps(paths: pinned.filter { FileManager.default.fileExists(atPath: $0) })
+        for name in ["New York", "London", "Tokyo"] {
+            if let city = WorldClockRules.city(named: name) { WorldClock.shared.add(city) }
+        }
         try? context.save()
     }
 }

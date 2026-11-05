@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, sound, mixer, toggles, knock, system, info, keepAwake
+    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, worldClock, sound, mixer, toggles, knock, system, info, keepAwake
 
     var id: String { rawValue }
 
@@ -19,6 +19,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "Camera"
         case .windows: "Windows"
         case .timer: "Timer"
+        case .worldClock: "World Clock"
         case .sound: "Sound"
         case .mixer: "Volume Mixer"
         case .toggles: "Toggles"
@@ -40,6 +41,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "web.camera"
         case .windows: "rectangle.split.2x1"
         case .timer: "timer"
+        case .worldClock: "globe"
         case .sound: "speaker.wave.2"
         case .mixer: "slider.horizontal.3"
         case .toggles: "switch.2"
@@ -62,6 +64,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "See yourself in a live camera preview, like a mirror."
         case .windows: "Snap the front window to halves, thirds or full size."
         case .timer: "Count down, with the time left in the menu bar."
+        case .worldClock: "See the time in other cities, with one in the menu bar."
         case .sound: "Switch between speakers, headphones and AirPods."
         case .mixer: "Turn each app up, down or off on its own."
         case .toggles: "Dark Mode, desktop icons, hidden files, lock and more."
@@ -84,6 +87,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: .green
         case .windows: .indigo
         case .timer: .green
+        case .worldClock: .teal
         case .sound: .cyan
         case .mixer: .orange
         case .toggles: .gray
@@ -105,6 +109,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .camera: "Check how you look on camera"
         case .windows: "Snap windows"
         case .timer: "Start a timer"
+        case .worldClock: "See the time in other cities"
         case .sound: "Choose the sound output"
         case .mixer: "Set the volume of each app"
         case .toggles: "Flip a system switch"

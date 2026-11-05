@@ -111,8 +111,11 @@ extension ToolbeltView {
             default: return false
             }
         case (51, true): // Command-Delete
-            guard case .clip(let clip)? = current else { return false }
-            model.delete(clip)
+            switch current {
+            case .clip(let clip)?: model.delete(clip)
+            case .city(let city)? where WorldClock.shared.cities.contains(city): WorldClock.shared.remove(city)
+            default: return false
+            }
             selected = min(selected, max(entries.count - 2, 0))
         default:
             return false

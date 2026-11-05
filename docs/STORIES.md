@@ -623,6 +623,19 @@ UX:
 - Permissions: key presses go through System Events (Automation, asked once), with Accessibility as the fallback
 Status: done
 
+### S-083 See another city's time in the menu bar
+As the user, I add cities like New York or Tokyo to World Clock, see each one's time and how far it is from here, and choose one to show in the menu bar.
+Acceptance:
+- [unit] Search finds cities with or without spaces, including big cities with no time zone of their own; times follow daylight saving; the difference says ahead, behind, Tomorrow or Yesterday.
+- [self] The first city added goes in the menu bar; another leaves it alone; choosing a city switches it; turning the tool off or removing the city clears it.
+- [snap] panel-worldClock shows Your Cities and Add a City; settings-worldClock shows the city picker; menubar-worldClock shows the name and time beside the icon.
+- [manual] The menu bar time changes on the minute, and is right after the Mac wakes from sleep; cities survive a restart.
+UX:
+- Flow: tool picker -> World Clock -> type a city -> ↩ adds it -> ↩ on a saved city shows or hides it in the menu bar, ⌘⌫ removes it
+- Surface: the shared panel and popover; Settings > World Clock picks the city too
+- Words: "Your Cities", "Add a City", "Same time as here", "Tomorrow, 9 h ahead"
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
