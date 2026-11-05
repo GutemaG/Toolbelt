@@ -466,7 +466,7 @@ struct ToolSettings: View {
         case .timer:
             Section {
             } footer: {
-                Text("Type any length in the Timer's search field, like 12, 90s or 1h30m. When time is up you hear a chime and see a notification.")
+                Text("Pick any length under Custom, or type one like 12, 90s or 1h30m. When time is up, a chime repeats for a minute and a banner stays until you click Done.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }

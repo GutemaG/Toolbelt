@@ -508,6 +508,19 @@ Status: done
 As the user, I start a countdown (a preset or a typed length like 12, 90s, 1h30m) and see the time left in the menu bar; at zero I hear a chime and see a notification.
 Status: done
 
+### S-085 Not miss the end of a timer, and set any length
+As the user, when time is up the chime repeats and a banner stays on screen until I click Done or add more time; and I can pick any hours, minutes and seconds without knowing what to type.
+Acceptance:
+- [unit] A length splits into hours, minutes and seconds.
+- [self] Time up rings, shows the banner and says so in the menu bar; +1 min counts down again; Done stops the chime and closes the banner.
+- [snap] panel-timer shows the Custom row; timer-alert shows the banner; panel-timer-ringing shows Done, +1 min and +5 min.
+- [manual] The chime is heard on time with no Toolbelt window open; the banner's buttons work on the first click; typing in another app isn't interrupted.
+UX:
+- Flow: Timer -> preset, typed length or Custom -> Start -> banner at zero -> Done
+- Surface: the shared panel and popover; a banner at the top of the screen under the mouse
+- Words: "Time’s Up", "Custom", "Done"
+Status: done
+
 ### S-071 Switch sound output
 As the user, I pick speakers, headphones or AirPods from Sound, or mute, without opening Control Center.
 Status: done

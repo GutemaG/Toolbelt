@@ -33,10 +33,15 @@ public enum TimerRules {
         return total
     }
 
+    /// A length split up for the hour, minute and second menus.
+    public static func parts(_ seconds: TimeInterval) -> (hours: Int, minutes: Int, seconds: Int) {
+        let total = Int(seconds.rounded())
+        return (total / 3600, (total % 3600) / 60, total % 60)
+    }
+
     /// "25 min", "1 h 30 min", "45 s" for tile titles.
     public static func title(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds.rounded())
-        let h = total / 3600, m = (total % 3600) / 60, s = total % 60
+        let (h, m, s) = parts(seconds)
         var parts: [String] = []
         if h > 0 { parts.append("\(h) h") }
         if m > 0 { parts.append("\(m) min") }

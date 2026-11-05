@@ -117,6 +117,22 @@ enum Snapshot {
                 }
                 WorldClock.shared.menuBarStyle = .flagAndTime
             }
+            // The banner and the tiles when time is up, without the chime.
+            if only == nil || only?.contains("timer") == true {
+                model.timerDone = 300
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PanelController.shared.show(.timer)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-timer-ringing-\(mode).png", window: PanelController.shared.panel)
+                    PanelController.shared.hide()
+                    TimerAlert.show(length: 300)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/timer-alert-\(mode).png", window: TimerAlert.panel)
+                    TimerAlert.hide()
+                }
+                model.timerDone = nil
+            }
             // The menu bar popover's width, where the tool picker wraps onto two rows.
             if only == nil || only?.contains("popover") == true {
                 let host = NSHostingView(rootView: ToolbeltView(surface: .popover)
@@ -126,7 +142,7 @@ enum Snapshot {
                 let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
                 window.contentView = host
                 window.orderFrontRegardless()
-                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark")] {
+                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark"), (.timer, "light"), (.timer, "dark")] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     model.tool = tool
                     try? await Task.sleep(for: .seconds(0.8))

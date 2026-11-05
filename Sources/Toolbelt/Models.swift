@@ -72,10 +72,12 @@ final class AppModel {
     /// The length last started, so its tile shows as on.
     var awakeLength: TimeInterval?
     /// Timer: when it ends, the seconds left while paused, its full length,
-    /// and a counter bumped every second so views redraw.
+    /// the length that finished until it's dismissed, and a counter bumped
+    /// every second so views redraw.
     var timerEnd: Date?
     var timerPausedLeft: TimeInterval?
     var timerLength: TimeInterval = 0
+    var timerDone: TimeInterval?
     var timerTick = 0
     /// Bumped after switching sound output or mute, so the tiles redraw.
     var soundTick = 0

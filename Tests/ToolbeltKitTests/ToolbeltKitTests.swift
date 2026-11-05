@@ -159,6 +159,8 @@ func fuzzyFinds(_ query: String, name: String) {
     #expect(TimerRules.parse("5x") == nil)
     #expect(TimerRules.title(5400) == "1 h 30 min")
     #expect(TimerRules.title(45) == "45 s")
+    let parts = TimerRules.parts(3725)
+    #expect(parts.hours == 1 && parts.minutes == 2 && parts.seconds == 5)
 }
 
 @Test func snippetSearch() {

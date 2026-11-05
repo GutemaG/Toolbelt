@@ -242,6 +242,29 @@ enum SelfTest {
             TimerTool.shared.start(1)
             try? await Task.sleep(for: .seconds(2.5))
             check("a timer ends by itself", !TimerTool.shared.isRunning)
+            check("time up chimes and shows a banner", TimerTool.shared.isRinging && TimerTool.shared.isChiming && TimerAlert.panel?.isVisible == true)
+            check("the menu bar says time is up", TimerTool.shared.menuBarText == "Time’s up")
+            TimerTool.shared.add(60)
+            check("+1 min after time up counts down again", !TimerTool.shared.isRinging && TimerTool.shared.isRunning && TimerTool.shared.remaining > 55)
+            check("counting down again closes the banner", TimerAlert.panel == nil && !TimerTool.shared.isChiming)
+            TimerTool.shared.start(1)
+            try? await Task.sleep(for: .seconds(2.5))
+            check("the banner leaves the keyboard with the other app", TimerAlert.panel?.isKeyWindow == false)
+            // A real click on Done, sent to the window while it doesn't have focus.
+            if let panel = TimerAlert.panel {
+                let spot = NSPoint(x: panel.frame.width - 36, y: panel.frame.height / 2)
+                for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                    if let click = NSEvent.mouseEvent(with: type, location: spot, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                                      windowNumber: panel.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1) {
+                        panel.sendEvent(click)
+                    }
+                    try? await Task.sleep(for: .seconds(0.2))
+                }
+            }
+            check("Done works on the first click", !TimerTool.shared.isRinging)
+            TimerTool.shared.dismiss()
+            check("Done stops the chime and the banner", !TimerTool.shared.isRinging && !TimerTool.shared.isChiming && TimerAlert.panel == nil)
+            check("nothing shows in the menu bar afterwards", TimerTool.shared.menuBarText == nil)
 
             // S-071 sound output, read only: never switches this Mac's sound
             let outputs = AudioOutput.devices()

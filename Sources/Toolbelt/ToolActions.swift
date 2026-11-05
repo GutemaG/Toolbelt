@@ -67,6 +67,13 @@ enum ToolActions {
             let timer = TimerTool.shared!
             // Reading the tick makes the view redraw the time left every second.
             _ = model.timerTick
+            if let done = model.timerDone {
+                return ("Time’s up: \(TimerRules.title(done))", [
+                    ToolAction(id: "timer.done", title: "Done", symbol: "checkmark", help: "Stop the chime", closes: false) { timer.dismiss() },
+                    ToolAction(id: "timer.add1", title: "+1 min", symbol: "plus.circle", help: "Count down one more minute", closes: false) { timer.add(60) },
+                    ToolAction(id: "timer.add5", title: "+5 min", symbol: "goforward.5", help: "Count down five more minutes", closes: false) { timer.add(300) },
+                ])
+            }
             if timer.isRunning {
                 let left = (timer.isPaused ? "Paused, " : "") + CaptureRules.elapsed(Int(timer.remaining.rounded(.up))) + " left"
                 return (left, [
@@ -171,7 +178,9 @@ enum ToolActions {
         case .info: return "←→ Switch Tabs   Click a value to copy it   ⌘R Refresh"
         case .system: return "↩ Bring to Front   Right-click to quit   Energy over the last 6 seconds"
         case .sound: return "↩ Switch output   The highlighted one is playing now"
-        case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"
+        case .timer:
+            if model.timerDone != nil { return "↩ Done" }
+            return model.timerEnd == nil ? "Type a length like 12, 90s or 1h30m, then ↩" : "↩ Pause or Resume"
         case .worldClock: return "↑↓ Choose   ↩ Add or Show   ←→ Time   ⌘↑↓ Move   ⌘⌫ Remove"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"
         }

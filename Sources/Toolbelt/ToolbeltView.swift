@@ -62,6 +62,10 @@ struct ToolbeltView: View {
                 Divider()
                 TimeTravelBar(city: chosenCity)
             }
+            if tool == .timer, model.timerEnd == nil, model.timerDone == nil {
+                Divider()
+                TimerCustomRow()
+            }
             Divider()
             footer
         }
@@ -195,6 +199,7 @@ struct ToolbeltView: View {
         case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
         case .mixer: return "Search Apps"
         case .worldClock: return "Search or Add Cities"
+        case .timer: return "Type a Length, Like 12 or 1h30m"
         default: return "Search \(tool.title)"
         }
     }
