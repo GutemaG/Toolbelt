@@ -223,14 +223,11 @@ struct TimeTravelBar: View {
                         .monospacedDigit()
                         .fixedSize()
                     Spacer(minLength: Space.sm)
-                    ViewThatFits(in: .horizontal) {
-                        legend
-                        EmptyView()
-                    }
                     if clock.travel != 0 {
                         Button("Reset") { clock.travel = 0 }
                             .buttonStyle(.borderless)
                             .controlSize(.small)
+                            .fixedSize()
                             .help("Back to the time now (esc)")
                     }
                 }
@@ -240,6 +237,7 @@ struct TimeTravelBar: View {
                     .help("Drag to see every clock earlier or later")
                     .accessibilityLabel("Time from now")
                     .accessibilityValue(WorldClockRules.travelLabel(clock.travel))
+                legend
             }
             .padding(.horizontal, Space.lg)
             .padding(.vertical, Space.sm)

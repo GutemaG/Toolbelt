@@ -95,7 +95,7 @@ enum Snapshot {
                     PanelController.shared.show(.worldClock)
                     // Opening resets the slider; move it after that.
                     try? await Task.sleep(for: .seconds(0.3))
-                    WorldClock.shared.travel = 5.25 * 3600
+                    WorldClock.shared.travel = 11.25 * 3600 // a long label, beside Reset
                     try? await Task.sleep(for: .seconds(0.8))
                     capture(to: "\(dir)/panel-worldClock-travel-\(mode).png", window: PanelController.shared.panel)
                 }
