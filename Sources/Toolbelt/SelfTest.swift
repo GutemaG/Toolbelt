@@ -176,12 +176,32 @@ enum SelfTest {
             let newYork = WorldClockRules.city(named: "New York")!, tokyo = WorldClockRules.city(named: "Tokyo")!
             clock.add(newYork)
             check("the first city goes in the menu bar", clock.menuBarCity == newYork)
-            check("the menu bar shows its name and time", StatusItems.shared?.mainTitle.contains("New York") == true && StatusItems.shared?.mainTitle.contains(":") == true,
+            check("the menu bar shows its flag and time", StatusItems.shared?.mainTitle.contains("🇺🇸") == true && StatusItems.shared?.mainTitle.contains(":") == true,
                   StatusItems.shared?.mainTitle ?? "no icon")
+            for style in WorldClockMenuStyle.allCases {
+                clock.menuBarStyle = style
+                check("the menu bar follows the style \(style.title)", StatusItems.shared?.mainTitle.contains(style.text(newYork, at: .now)) == true,
+                      StatusItems.shared?.mainTitle ?? "no icon")
+            }
+            clock.menuBarStyle = .cityAndTime
             clock.add(tokyo)
             check("another city leaves the menu bar alone", clock.menuBarCity == newYork && clock.cities.count == 2)
             clock.toggleMenuBar(tokyo)
             check("choosing a city switches the menu bar", StatusItems.shared?.mainTitle.contains("Tokyo") == true)
+            clock.move(tokyo, onto: newYork)
+            check("dragging a city puts it in that place", clock.cities == [tokyo, newYork])
+            clock.move(tokyo, by: 1)
+            check("Move Down moves a city", clock.cities == [newYork, tokyo])
+            check("Move Down stops at the end", !clock.move(tokyo, by: 1))
+            let menuBefore = StatusItems.shared?.mainTitle
+            clock.nudge(4)
+            check("the arrow keys move the slider an hour in four steps", clock.travel == 3600)
+            StatusItems.shared?.refreshIcons()
+            check("the slider leaves the menu bar at the real time", StatusItems.shared?.mainTitle == menuBefore)
+            clock.nudge(1000)
+            check("the slider stops at a day from now", clock.travel == WorldClockRules.travelReach)
+            clock.travel = 0
+            clock.menuBarStyle = .flagAndTime
             ToolPrefs.shared.enabled.remove(.worldClock)
             StatusItems.shared?.apply(ToolPrefs.shared)
             check("turning World Clock off clears the menu bar", StatusItems.shared?.mainTitle == "")

@@ -22,6 +22,67 @@ public struct WorldCity: Hashable, Identifiable, Sendable {
     }
 
     public var timeZone: TimeZone { TimeZone(identifier: zone) ?? .current }
+
+    /// The flag of the zone's country, "🇺🇸". Empty for a zone with no country.
+    public var flag: String { WorldClockRules.flag(zone: zone) }
+}
+
+/// What a city's people are likely doing at some hour.
+public enum DayPeriod: String, CaseIterable, Sendable {
+    case work, edge, night
+
+    public var title: String {
+        switch self {
+        case .work: "Work"
+        case .edge: "Morning, Evening"
+        case .night: "Night"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .work: "sun.max.fill"
+        case .edge: "sunset.fill"
+        case .night: "moon.fill"
+        }
+    }
+
+    /// 9 to 5 is work, 7 to 9 and 5 to 10 are morning and evening, the rest is night.
+    public static func at(hour: Int) -> DayPeriod {
+        switch hour {
+        case 9..<17: .work
+        case 7..<9, 17..<22: .edge
+        default: .night
+        }
+    }
+}
+
+/// How the city in the menu bar is written.
+public enum WorldClockMenuStyle: String, CaseIterable, Identifiable, Sendable {
+    case flagAndTime, flagCityAndTime, cityAndTime, timeOnly, cityAboveTime
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .flagAndTime: "Flag and Time"
+        case .flagCityAndTime: "Flag, City and Time"
+        case .cityAndTime: "City and Time"
+        case .timeOnly: "Time Only"
+        case .cityAboveTime: "City Above Time"
+        }
+    }
+
+    public func text(_ city: WorldCity, at date: Date, locale: Locale = .autoupdatingCurrent) -> String {
+        let time = WorldClockRules.time(city, at: date, locale: locale)
+        switch self {
+        case .flagAndTime: return [city.flag, time].filter { !$0.isEmpty }.joined(separator: " ")
+        case .flagCityAndTime: return [city.flag, city.name, time].filter { !$0.isEmpty }.joined(separator: " ")
+        case .cityAndTime: return city.name + " " + time
+        case .timeOnly: return time
+        case .cityAboveTime: return city.name + "\n" + time
+        }
+    }
 }
 
 /// Finding cities and writing their time.
@@ -82,25 +143,129 @@ public enum WorldClockRules {
         return formatter.string(from: date)
     }
 
-    /// How the city differs from here: "3 h ahead", "Tomorrow, 9 h ahead".
-    public static func detail(_ city: WorldCity, at date: Date, here: TimeZone = .current) -> String {
-        let seconds = city.timeZone.secondsFromGMT(for: date) - here.secondsFromGMT(for: date)
-        guard seconds != 0 else { return "Same time as here" }
-        let minutes = abs(seconds) / 60
-        let length = minutes % 60 == 0 ? "\(minutes / 60) h" : minutes < 60 ? "\(minutes) min" : "\(minutes / 60) h \(minutes % 60) min"
-        let offset = length + (seconds > 0 ? " ahead" : " behind")
-        guard !sameDay(date, city.timeZone, here) else { return offset }
-        return (seconds > 0 ? "Tomorrow, " : "Yesterday, ") + offset
+    /// The difference from here at that moment: "+3h", "-5h 30m", nil when the same.
+    public static func difference(_ zone: TimeZone, at date: Date, here: TimeZone = .current) -> String? {
+        let seconds = zone.secondsFromGMT(for: date) - here.secondsFromGMT(for: date)
+        return seconds == 0 ? nil : signedLength(seconds)
     }
 
-    private static func sameDay(_ date: Date, _ a: TimeZone, _ b: TimeZone) -> Bool {
+    /// "+5h 15m", "-30m". Minutes are left out on the hour.
+    static func signedLength(_ seconds: Int) -> String {
+        let minutes = abs(seconds) / 60
+        let parts = [minutes >= 60 ? "\(minutes / 60)h" : nil, minutes % 60 != 0 ? "\(minutes % 60)m" : nil].compactMap { $0 }
+        return (seconds < 0 ? "-" : "+") + parts.joined(separator: " ")
+    }
+
+    /// The day shown there at `date`, counted from today here: "Today", "Tomorrow".
+    public static func day(_ zone: TimeZone, at date: Date, now: Date, here: TimeZone = .current) -> String {
+        let days = dayNumber(date, in: zone) - dayNumber(now, in: here)
+        switch days {
+        case 0: return "Today"
+        case 1: return "Tomorrow"
+        case -1: return "Yesterday"
+        default: return days > 0 ? "In \(days) days" : "\(-days) days ago"
+        }
+    }
+
+    private static func dayNumber(_ date: Date, in zone: TimeZone) -> Int {
         var calendar = Calendar(identifier: .gregorian)
-        let parts: Set<Calendar.Component> = [.year, .month, .day]
-        calendar.timeZone = a
-        let first = calendar.dateComponents(parts, from: date)
-        calendar.timeZone = b
-        let second = calendar.dateComponents(parts, from: date)
-        return first.year == second.year && first.month == second.month && first.day == second.day
+        calendar.timeZone = zone
+        let parts = calendar.dateComponents([.year, .month, .day], from: date)
+        calendar.timeZone = .gmt
+        return Int((calendar.date(from: parts)?.timeIntervalSince1970 ?? 0) / 86_400)
+    }
+
+    /// The line under a city: "Tomorrow, +9h", or "Today" with no difference.
+    public static func detail(_ zone: TimeZone, at date: Date, now: Date, here: TimeZone = .current) -> String {
+        [day(zone, at: date, now: now, here: here), difference(zone, at: date, here: here)]
+            .compactMap { $0 }
+            .joined(separator: ", ")
+    }
+
+    /// "UTC-5", "UTC+5:30", "UTC".
+    public static func utc(_ zone: TimeZone, at date: Date) -> String {
+        let seconds = zone.secondsFromGMT(for: date)
+        guard seconds != 0 else { return "UTC" }
+        let minutes = abs(seconds) / 60
+        return "UTC" + (seconds < 0 ? "-" : "+") + "\(minutes / 60)" + (minutes % 60 == 0 ? "" : String(format: ":%02d", minutes % 60))
+    }
+
+    // MARK: Flags
+
+    /// Old zone names macOS still lists, which its country file only has under their new names.
+    private static let oldZones: [String: String] = [
+        "America/Godthab": "GL", "America/Montreal": "CA", "America/Nipigon": "CA", "America/Pangnirtung": "CA",
+        "America/Rainy_River": "CA", "America/Santa_Isabel": "MX", "America/Shiprock": "US", "America/Thunder_Bay": "CA",
+        "America/Yellowknife": "CA", "Asia/Calcutta": "IN", "Asia/Choibalsan": "MN", "Asia/Chongqing": "CN",
+        "Asia/Harbin": "CN", "Asia/Kashgar": "CN", "Asia/Katmandu": "NP", "Asia/Rangoon": "MM", "Australia/Currie": "AU",
+        "Europe/Kiev": "UA", "Europe/Uzhgorod": "UA", "Europe/Zaporozhye": "UA", "Pacific/Enderbury": "KI",
+        "Pacific/Johnston": "UM", "Pacific/Ponape": "FM", "Pacific/Truk": "FM",
+    ]
+
+    /// Zone to country code, from the list that ships with macOS.
+    private static let countries: [String: String] = {
+        let file = (try? String(contentsOfFile: "/usr/share/zoneinfo/zone.tab", encoding: .utf8)) ?? ""
+        var result = oldZones
+        for line in file.split(separator: "\n") where !line.hasPrefix("#") {
+            let columns = line.split(separator: "\t")
+            if columns.count >= 3 { result[String(columns[2])] = String(columns[0]) }
+        }
+        return result
+    }()
+
+    static func flag(zone: String) -> String {
+        guard let code = countries[zone] else { return "" }
+        return String(String.UnicodeScalarView(code.unicodeScalars.compactMap { Unicode.Scalar(127_397 + $0.value) }))
+    }
+
+    // MARK: Time travel
+
+    /// How far the slider reaches each way, in seconds.
+    public static let travelReach: TimeInterval = 24 * 3600
+    /// One step of the slider or the arrow keys, in seconds.
+    public static let travelStep: TimeInterval = 15 * 60
+
+    /// The moment the slider points at. Off now, it lands on a quarter hour, so
+    /// you read 3:00 PM and not 2:53 PM.
+    public static func traveled(now: Date, by shift: TimeInterval) -> Date {
+        guard shift != 0 else { return now }
+        let seconds = now.timeIntervalSince1970 + shift
+        return Date(timeIntervalSince1970: (seconds / travelStep).rounded() * travelStep)
+    }
+
+    /// "Now", or "+5h 15m from now".
+    public static func travelLabel(_ shift: TimeInterval) -> String {
+        shift == 0 ? "Now" : signedLength(Int(shift)) + " from now"
+    }
+
+    /// One stretch of the same period along the slider. Start and end run from 0 to 1.
+    public struct DaySegment: Equatable, Sendable {
+        public let period: DayPeriod
+        public let start: Double
+        public var end: Double
+    }
+
+    public static func period(_ zone: TimeZone, at date: Date) -> DayPeriod {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = zone
+        return .at(hour: calendar.component(.hour, from: date))
+    }
+
+    /// The periods in a zone across the slider's whole reach around `now`.
+    public static func daySegments(now: Date, in zone: TimeZone) -> [DaySegment] {
+        let steps = Int(travelReach * 2 / travelStep)
+        var segments: [DaySegment] = []
+        for step in 0..<steps {
+            let date = now.addingTimeInterval(-travelReach + Double(step) * travelStep)
+            let period = period(zone, at: date)
+            let start = Double(step) / Double(steps), end = Double(step + 1) / Double(steps)
+            if segments.last?.period == period {
+                segments[segments.count - 1].end = end
+            } else {
+                segments.append(DaySegment(period: period, start: start, end: end))
+            }
+        }
+        return segments
     }
 
     /// Seconds until the clock next changes.

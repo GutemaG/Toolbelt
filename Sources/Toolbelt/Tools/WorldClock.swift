@@ -10,6 +10,11 @@ final class WorldClock {
 
     private(set) var cities: [WorldCity]
     private(set) var menuBarCity: WorldCity?
+    /// How the menu bar writes the city.
+    var menuBarStyle: WorldClockMenuStyle { didSet { changed() } }
+    /// How far the slider is from now, in seconds. The menu bar always shows
+    /// the real time; this only moves the page, and resets when it opens.
+    var travel: TimeInterval = 0
     @ObservationIgnored private let defaults: UserDefaults?
     @ObservationIgnored private var tick: Task<Void, Never>?
 
@@ -17,6 +22,7 @@ final class WorldClock {
         defaults = Store.isOverridden ? nil : .standard
         cities = (defaults?.stringArray(forKey: "worldClock.cities") ?? []).compactMap(WorldCity.init(id:))
         menuBarCity = defaults?.string(forKey: "worldClock.menuBar").flatMap(WorldCity.init(id:))
+        menuBarStyle = defaults?.string(forKey: "worldClock.menuBarStyle").flatMap(WorldClockMenuStyle.init(rawValue:)) ?? .flagAndTime
     }
 
     /// Adds a city. The first one also goes in the menu bar, since that is what the tool is for.
@@ -43,10 +49,32 @@ final class WorldClock {
         setMenuBar(menuBarCity == city ? nil : city)
     }
 
-    /// "New York 2:32 PM" for the menu bar, nil when nothing should show.
+    /// Dragging one city onto another puts it in that city's place.
+    func move(_ city: WorldCity, onto target: WorldCity) {
+        guard city != target, let from = cities.firstIndex(of: city), let to = cities.firstIndex(of: target) else { return }
+        cities.insert(cities.remove(at: from), at: to)
+        changed()
+    }
+
+    /// Moves a city up (-1) or down (+1). Returns whether it moved.
+    @discardableResult
+    func move(_ city: WorldCity, by offset: Int) -> Bool {
+        guard let from = cities.firstIndex(of: city), cities.indices.contains(from + offset) else { return false }
+        cities.insert(cities.remove(at: from), at: from + offset)
+        changed()
+        return true
+    }
+
+    /// One slider step with the arrow keys.
+    func nudge(_ steps: Int) {
+        let reach = WorldClockRules.travelReach
+        travel = min(max(travel + Double(steps) * WorldClockRules.travelStep, -reach), reach)
+    }
+
+    /// The city as the menu bar writes it, nil when nothing should show.
     var menuBarText: String? {
         guard let menuBarCity, ToolPrefs.shared.enabled.contains(.worldClock) else { return nil }
-        return menuBarCity.name + " " + WorldClockRules.time(menuBarCity, at: .now)
+        return menuBarStyle.text(menuBarCity, at: .now)
     }
 
     /// Starts or stops the tick to match what the menu bar shows.
@@ -67,11 +95,69 @@ final class WorldClock {
     private func changed() {
         defaults?.set(cities.map(\.id), forKey: "worldClock.cities")
         defaults?.set(menuBarCity?.id, forKey: "worldClock.menuBar")
+        defaults?.set(menuBarStyle.rawValue, forKey: "worldClock.menuBarStyle")
         StatusItems.shared?.apply(ToolPrefs.shared)
     }
 }
 
-/// One city in the World Clock list: its name, how it differs from here, and its time.
+extension DayPeriod {
+    /// The same color on the slider's band, its legend and a city's symbol.
+    var color: Color {
+        switch self {
+        case .work: .orange
+        case .edge: .pink
+        case .night: .indigo
+        }
+    }
+}
+
+/// One clock line: an icon, a name, the day and difference, the UTC offset, and the time.
+private struct ClockLine<Icon: View, Accessory: View>: View {
+    let name: String
+    let zone: TimeZone
+    let now: Date
+    var selected = false
+    @ViewBuilder let icon: Icon
+    @ViewBuilder let accessory: Accessory
+
+    private var date: Date { WorldClockRules.traveled(now: now, by: WorldClock.shared.travel) }
+    private var secondary: AnyShapeStyle { selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary) }
+
+    var body: some View {
+        let period = WorldClockRules.period(zone, at: date)
+        HStack(spacing: Space.md) {
+            icon
+                .frame(width: Space.xxl)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name)
+                    .lineLimit(1)
+                HStack(spacing: Space.sm) {
+                    Text(WorldClockRules.detail(zone, at: date, now: now))
+                        .font(.caption)
+                        .foregroundStyle(secondary)
+                    Text(WorldClockRules.utc(zone, at: date))
+                        .font(.caption2)
+                        .foregroundStyle(secondary)
+                        .padding(.horizontal, Space.xs + 2)
+                        .padding(.vertical, 1)
+                        .background(.quaternary, in: .capsule)
+                }
+            }
+            Spacer(minLength: Space.sm)
+            accessory
+            Image(systemName: period.symbol)
+                .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(period.color))
+                .help(period.title)
+                .accessibilityLabel(period.title)
+            Text(WorldClockRules.time(WorldCity(name: name, zone: zone.identifier), at: date))
+                .font(.title3)
+                .monospacedDigit()
+                .fixedSize()
+        }
+    }
+}
+
+/// One city in the World Clock list.
 struct WorldCityRow: View {
     let city: WorldCity
     let selected: Bool
@@ -79,25 +165,22 @@ struct WorldCityRow: View {
 
     var body: some View {
         TimelineView(.everyMinute) { context in
-            HStack(spacing: Space.md) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(city.name)
-                        .lineLimit(1)
-                    Text(WorldClockRules.detail(city, at: context.date))
-                        .font(.caption)
-                        .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent.opacity(0.8)) : AnyShapeStyle(.secondary))
+            ClockLine(name: city.name, zone: city.timeZone, now: context.date, selected: selected) {
+                if city.flag.isEmpty {
+                    Image(systemName: "globe")
+                        .font(.title2)
+                } else {
+                    Text(city.flag)
+                        .font(.title2)
+                        .accessibilityHidden(true)
                 }
-                Spacer(minLength: Space.sm)
+            } accessory: {
                 if clock.menuBarCity == city {
                     Image(systemName: "menubar.rectangle")
                         .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(Palette.accentText))
                         .help("Showing in the menu bar")
                         .accessibilityLabel("Showing in the menu bar")
                 }
-                Text(WorldClockRules.time(city, at: context.date))
-                    .font(.title3)
-                    .monospacedDigit()
-                    .fixedSize()
                 if !clock.cities.contains(city) {
                     Image(systemName: "plus.circle")
                         .foregroundStyle(selected ? AnyShapeStyle(Palette.onAccent) : AnyShapeStyle(.secondary))
@@ -109,19 +192,138 @@ struct WorldCityRow: View {
     }
 }
 
-/// Settings > World Clock: which city sits in the menu bar.
-struct WorldClockOptions: View {
+/// Your own time, pinned above the cities, so the differences have a reference.
+struct LocalTimeRow: View {
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            ClockLine(name: "Local Time", zone: .autoupdatingCurrent, now: context.date) {
+                Image(systemName: "location.fill")
+                    .foregroundStyle(.secondary)
+            } accessory: {
+                EmptyView()
+            }
+        }
+        .padding(.horizontal, Space.lg)
+        .padding(.vertical, Space.sm)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// The slider that moves every clock on the page together, with a band above
+/// it showing work, morning and evening, and night here.
+struct TimeTravelBar: View {
     private var clock: WorldClock { .shared }
+
+    var body: some View {
+        TimelineView(.everyMinute) { context in
+            VStack(spacing: Space.xs) {
+                HStack(spacing: Space.md) {
+                    Text(WorldClockRules.travelLabel(clock.travel))
+                        .font(.callout)
+                        .monospacedDigit()
+                        .fixedSize()
+                    Spacer(minLength: Space.sm)
+                    ViewThatFits(in: .horizontal) {
+                        legend
+                        EmptyView()
+                    }
+                    if clock.travel != 0 {
+                        Button("Reset") { clock.travel = 0 }
+                            .buttonStyle(.borderless)
+                            .controlSize(.small)
+                            .help("Back to the time now (esc)")
+                    }
+                }
+                .frame(minHeight: Space.xl)
+                band(now: context.date)
+                // Snapped here, not with `step:`, which draws a row of tick marks under the slider.
+                let step = WorldClockRules.travelStep, reach = WorldClockRules.travelReach
+                Slider(value: Binding(get: { clock.travel }, set: { clock.travel = ($0 / step).rounded() * step }),
+                       in: -reach...reach)
+                    .controlSize(.small)
+                    .help("Drag to see every clock earlier or later")
+                    .accessibilityLabel("Time from now")
+                    .accessibilityValue(WorldClockRules.travelLabel(clock.travel))
+            }
+            .padding(.horizontal, Space.lg)
+            .padding(.vertical, Space.sm)
+        }
+    }
+
+    private var legend: some View {
+        HStack(spacing: Space.md) {
+            ForEach(DayPeriod.allCases, id: \.self) { period in
+                Label {
+                    Text(period.title)
+                } icon: {
+                    Image(systemName: period.symbol)
+                        .foregroundStyle(period.color)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .fixedSize()
+    }
+
+    private func band(now: Date) -> some View {
+        GeometryReader { geometry in
+            HStack(spacing: 0) {
+                ForEach(Array(WorldClockRules.daySegments(now: now, in: .autoupdatingCurrent).enumerated()), id: \.offset) { _, segment in
+                    Rectangle()
+                        .fill(segment.period.color)
+                        .frame(width: geometry.size.width * (segment.end - segment.start))
+                }
+            }
+        }
+        .frame(height: Space.xs)
+        .clipShape(.capsule)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Dragging a saved city onto another to change the order.
+struct CityReordering: ViewModifier {
+    let city: WorldCity
+    @State private var targeted = false
+
+    func body(content: Content) -> some View {
+        content
+            .draggable(city.id) {
+                Text(city.flag + " " + city.name)
+                    .padding(Space.sm)
+            }
+            .dropDestination(for: String.self) { ids, _ in
+                guard let moved = ids.first.flatMap(WorldCity.init(id:)) else { return false }
+                WorldClock.shared.move(moved, onto: city)
+                return true
+            } isTargeted: { targeted = $0 }
+            .overlay {
+                if targeted { RoundedRectangle(cornerRadius: 8).stroke(.tint) }
+            }
+            // The panel moves when dragged by its background; over a city, a drag moves the city.
+            .onHover { PanelController.shared.panel.isMovableByWindowBackground = !$0 }
+            .onDisappear { PanelController.shared.panel.isMovableByWindowBackground = true }
+    }
+}
+
+/// Settings > World Clock: which city sits in the menu bar, and how it is written.
+struct WorldClockOptions: View {
+    @Bindable private var clock = WorldClock.shared
 
     var body: some View {
         Section {
             Picker("City in the menu bar", selection: Binding(get: { clock.menuBarCity }, set: { clock.setMenuBar($0) })) {
                 Text("None").tag(WorldCity?.none)
-                ForEach(clock.cities) { Text($0.name).tag(WorldCity?.some($0)) }
+                ForEach(clock.cities) { Text($0.flag + " " + $0.name).tag(WorldCity?.some($0)) }
             }
             .disabled(clock.cities.isEmpty)
+            Picker("Show it as", selection: $clock.menuBarStyle) {
+                ForEach(WorldClockMenuStyle.allCases) { Text($0.title).tag($0) }
+            }
+            .disabled(clock.menuBarCity == nil)
         } footer: {
-            Text("Add cities on the World Clock page. Its time shows on the World Clock icon, or beside the Toolbelt icon when World Clock has no icon of its own.")
+            Text("Add cities on the World Clock page. The time shows on the World Clock icon, or beside the Toolbelt icon when World Clock has no icon of its own.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }

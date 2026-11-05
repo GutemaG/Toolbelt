@@ -633,7 +633,19 @@ Acceptance:
 UX:
 - Flow: tool picker -> World Clock -> type a city -> ↩ adds it -> ↩ on a saved city shows or hides it in the menu bar, ⌘⌫ removes it
 - Surface: the shared panel and popover; Settings > World Clock picks the city too
-- Words: "Your Cities", "Add a City", "Same time as here", "Tomorrow, 9 h ahead"
+- Words: "Your Cities", "Add a City", "Tomorrow, +9h"
+Status: done
+
+### S-084 Compare times with flags, a slider, and my own order
+As the user, I see each city's flag, its difference from my local time and its UTC offset under my own Local Time; I drag a slider to see what time it will be everywhere, with who is awake; I drag cities into my order; and I choose in Settings how the menu bar writes the city.
+Acceptance:
+- [unit] Every city in the catalog has a flag; differences and UTC offsets follow daylight saving; the slider lands on quarter hours and Today counts from here and now; the day and night band has no gaps; each menu bar style writes what its name says.
+- [self] The real menu bar follows every style; dragging or Move Up and Down changes the order and stops at the ends; the arrow keys step the slider and stop a day out; the slider never changes the menu bar.
+- [snap] panel-worldClock shows Local Time, flags, tags and the slider; panel-worldClock-travel shows moved clocks and Reset; popover-worldClock fits the narrow width; menubar-worldClock-<style> shows each style; settings-worldClock shows both pickers.
+- [manual] Dragging a row moves it and not the window; dragging the slider moves every time at once; Reset and esc go back to now; reopening starts at now.
+UX:
+- Flow: World Clock -> Local Time on top, cities below, slider at the bottom -> drag or ←→ to move time, Reset or esc to go back -> drag a city or ⌘↑↓ to change the order -> Settings > World Clock > Show it as
+- Words: "Local Time", "Today, +3h", "UTC-5", "Now", "+5h 15m from now", "Work", "Morning, Evening", "Night", "Flag and Time", "City Above Time"
 Status: done
 
 ## Later

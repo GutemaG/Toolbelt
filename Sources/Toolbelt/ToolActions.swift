@@ -172,7 +172,7 @@ enum ToolActions {
         case .system: return "↩ Bring to Front   Right-click to quit   Energy over the last 6 seconds"
         case .sound: return "↩ Switch output   The highlighted one is playing now"
         case .timer: return "Type a length like 12, 90s or 1h30m, then ↩"
-        case .worldClock: return "↩ Add a City, or Show It in the Menu Bar   ⌘⌫ Remove"
+        case .worldClock: return "↩ Add or Show in Menu Bar   ←→ Time   ⌘↑↓ Move   ⌘⌫ Remove"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"
         }
     }

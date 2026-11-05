@@ -82,6 +82,12 @@ extension ToolbeltView {
         case (123, false) where tool == .mixer && query.isEmpty: VolumeMixer.shared.nudge(-0.1, in: VolumeMixerView.shown(query)) // Left
         case (124, false) where tool == .mixer && query.isEmpty: VolumeMixer.shared.nudge(0.1, in: VolumeMixerView.shown(query))  // Right
         case (36, _) where tool == .mixer, (76, _) where tool == .mixer: VolumeMixer.shared.toggleSelected(in: VolumeMixerView.shown(query)) // Return mutes
+        case (123, false) where tool == .worldClock && query.isEmpty: WorldClock.shared.nudge(-1) // Left: earlier
+        case (124, false) where tool == .worldClock && query.isEmpty: WorldClock.shared.nudge(1)  // Right: later
+        case (125, true) where tool == .worldClock, (126, true) where tool == .worldClock: // Command-Down, Command-Up
+            guard case .city(let city)? = current else { return false }
+            let offset = event.keyCode == 125 ? 1 : -1
+            if WorldClock.shared.move(city, by: offset) { selected += offset }
         case (125, false): // Down: one row, or one grid row inside the pinned grid
             let step = selected < gridCount ? min(gridColumns, max(gridCount - selected, 1)) : 1
             selected = min(selected + step, max(entries.count - 1, 0))
@@ -96,7 +102,10 @@ extension ToolbeltView {
         case (36, _), (76, _): // Return, Enter
             if let current { activate(current, plainText: flags.contains(.option)) }
         case (53, _): // Escape
-            if !query.isEmpty { query = "" } else if model.pickingApps { stopPicking() } else { close() }
+            if !query.isEmpty { query = "" }
+            else if model.pickingApps { stopPicking() }
+            else if tool == .worldClock, WorldClock.shared.travel != 0 { WorldClock.shared.travel = 0 }
+            else { close() }
         case (48, false) where fixedTool == nil && panelTools.count > 1: // Tab switches tool
             let index = panelTools.firstIndex(of: model.tool) ?? 0
             model.tool = panelTools[(index + 1) % panelTools.count]
@@ -123,3 +132,15 @@ extension ToolbeltView {
         if [123, 124, 125, 126].contains(event.keyCode) { keyboardMoves += 1 }
         return true
     }}
+
+extension View {
+    /// Saved cities in World Clock can be dragged to change their order.
+    @ViewBuilder
+    func reorderable(_ entry: ToolbeltView.Entry) -> some View {
+        if case .city(let city) = entry, WorldClock.shared.cities.contains(city) {
+            modifier(CityReordering(city: city))
+        } else {
+            self
+        }
+    }
+}

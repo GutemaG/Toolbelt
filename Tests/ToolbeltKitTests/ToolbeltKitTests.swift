@@ -425,13 +425,71 @@ private extension KnockDetector.Event {
     let kolkata = WorldCity(name: "Mumbai", zone: "Asia/Kolkata")
     #expect(WorldClockRules.time(newYork, at: date, locale: Locale(identifier: "en_GB")) == "18:30")
     #expect(WorldClockRules.time(tokyo, at: date, locale: Locale(identifier: "en_GB")) == "08:30")
-    #expect(WorldClockRules.detail(newYork, at: date, here: utc) == "5 h behind")
-    #expect(WorldClockRules.detail(tokyo, at: date, here: utc) == "Tomorrow, 9 h ahead")
-    #expect(WorldClockRules.detail(kolkata, at: date, here: utc) == "Tomorrow, 5 h 30 min ahead")
-    #expect(WorldClockRules.detail(newYork, at: date, here: newYork.timeZone) == "Same time as here")
-    #expect(WorldClockRules.detail(WorldCity(name: "London", zone: "Europe/London"), at: date, here: tokyo.timeZone) == "Yesterday, 9 h behind")
+    func detail(_ city: WorldCity, here: TimeZone) -> String {
+        WorldClockRules.detail(city.timeZone, at: date, now: date, here: here)
+    }
+    #expect(detail(newYork, here: utc) == "Today, -5h")
+    #expect(detail(tokyo, here: utc) == "Tomorrow, +9h")
+    #expect(detail(kolkata, here: utc) == "Tomorrow, +5h 30m")
+    #expect(detail(newYork, here: newYork.timeZone) == "Today")
+    #expect(detail(WorldCity(name: "London", zone: "Europe/London"), here: tokyo.timeZone) == "Yesterday, -9h")
+    #expect(WorldClockRules.utc(newYork.timeZone, at: date) == "UTC-5")
+    #expect(WorldClockRules.utc(kolkata.timeZone, at: date) == "UTC+5:30")
+    #expect(WorldClockRules.utc(utc, at: date) == "UTC")
     // Summer moves New York to UTC-4.
-    #expect(WorldClockRules.detail(newYork, at: date.addingTimeInterval(182 * 86_400), here: utc) == "4 h behind")
+    let summer = date.addingTimeInterval(182 * 86_400)
+    #expect(WorldClockRules.difference(newYork.timeZone, at: summer, here: utc) == "-4h")
+    #expect(WorldClockRules.utc(newYork.timeZone, at: summer) == "UTC-4")
     #expect(WorldClockRules.secondsToNextMinute(Date(timeIntervalSince1970: 120)) == 60)
     #expect(WorldClockRules.secondsToNextMinute(Date(timeIntervalSince1970: 170)) == 10)
+}
+
+@Test func worldClockFlags() {
+    #expect(WorldCity(name: "New York", zone: "America/New_York").flag == "🇺🇸")
+    #expect(WorldCity(name: "Addis Ababa", zone: "Africa/Addis_Ababa").flag == "🇪🇹")
+    #expect(WorldCity(name: "Mumbai", zone: "Asia/Kolkata").flag == "🇮🇳")
+    #expect(WorldCity(name: "Calcutta", zone: "Asia/Calcutta").flag == "🇮🇳")
+    #expect(WorldCity(name: "Kiev", zone: "Europe/Kiev").flag == "🇺🇦")
+    #expect(WorldCity(name: "Nowhere", zone: "UTC").flag == "")
+    #expect(WorldClockRules.catalog.filter { $0.flag.isEmpty }.isEmpty)
+}
+
+@Test func worldClockTimeTravel() {
+    // 2026-01-15 23:30 UTC.
+    let now = Date(timeIntervalSince1970: 1_768_519_800)
+    let utc = TimeZone(identifier: "UTC")!
+    let tokyo = TimeZone(identifier: "Asia/Tokyo")!
+    #expect(WorldClockRules.traveled(now: now, by: 0) == now)
+    // Off now, it lands on a quarter hour.
+    let offQuarter = now.addingTimeInterval(7 * 60)
+    #expect(WorldClockRules.traveled(now: offQuarter, by: 3600) == now.addingTimeInterval(3600))
+    #expect(WorldClockRules.travelLabel(0) == "Now")
+    #expect(WorldClockRules.travelLabel(5.25 * 3600) == "+5h 15m from now")
+    #expect(WorldClockRules.travelLabel(-1800) == "-30m from now")
+    // Today counts from here and now, so moving the slider past midnight changes it.
+    let later = WorldClockRules.traveled(now: now, by: 3600)
+    #expect(WorldClockRules.day(utc, at: later, now: now, here: utc) == "Tomorrow")
+    #expect(WorldClockRules.day(utc, at: now, now: now, here: utc) == "Today")
+    #expect(WorldClockRules.day(tokyo, at: now.addingTimeInterval(24 * 3600), now: now, here: utc) == "In 2 days")
+    #expect(WorldClockRules.day(utc, at: now.addingTimeInterval(-48 * 3600), now: now, here: utc) == "2 days ago")
+    // The periods cover the whole slider without a gap.
+    let segments = WorldClockRules.daySegments(now: now, in: utc)
+    #expect(segments.first?.start == 0 && segments.last?.end == 1)
+    for (a, b) in zip(segments, segments.dropFirst()) { #expect(a.end == b.start && a.period != b.period) }
+    #expect(DayPeriod.at(hour: 9) == .work && DayPeriod.at(hour: 16) == .work)
+    #expect(DayPeriod.at(hour: 8) == .edge && DayPeriod.at(hour: 21) == .edge)
+    #expect(DayPeriod.at(hour: 22) == .night && DayPeriod.at(hour: 6) == .night)
+}
+
+@Test func worldClockMenuStyles() {
+    let date = Date(timeIntervalSince1970: 1_768_519_800)
+    let city = WorldCity(name: "New York", zone: "America/New_York")
+    let gb = Locale(identifier: "en_GB")
+    #expect(WorldClockMenuStyle.flagAndTime.text(city, at: date, locale: gb) == "🇺🇸 18:30")
+    #expect(WorldClockMenuStyle.flagCityAndTime.text(city, at: date, locale: gb) == "🇺🇸 New York 18:30")
+    #expect(WorldClockMenuStyle.cityAndTime.text(city, at: date, locale: gb) == "New York 18:30")
+    #expect(WorldClockMenuStyle.timeOnly.text(city, at: date, locale: gb) == "18:30")
+    #expect(WorldClockMenuStyle.cityAboveTime.text(city, at: date, locale: gb) == "New York\n18:30")
+    // No flag leaves no stray space.
+    #expect(WorldClockMenuStyle.flagAndTime.text(WorldCity(name: "Nowhere", zone: "UTC"), at: date, locale: gb) == "23:30")
 }

@@ -1,6 +1,7 @@
 import AppKit
 import IOKit.pwr_mgt
 import SwiftUI
+import ToolbeltKit
 
 /// Screenshot mode for agents.
 ///   APP_STORE=/tmp/test.store APP_SNAPSHOT=/tmp/shots ~/Applications/Toolbelt.app/Contents/MacOS/Toolbelt
@@ -89,9 +90,23 @@ enum Snapshot {
             }
             // The city's time beside the Toolbelt icon.
             if only == nil || only?.contains("worldClock") == true {
+                for mode in ["light", "dark"] {
+                    NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
+                    PanelController.shared.show(.worldClock)
+                    // Opening resets the slider; move it after that.
+                    try? await Task.sleep(for: .seconds(0.3))
+                    WorldClock.shared.travel = 5.25 * 3600
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-worldClock-travel-\(mode).png", window: PanelController.shared.panel)
+                }
+                WorldClock.shared.travel = 0
                 PanelController.shared.hide()
-                try? await Task.sleep(for: .seconds(0.3))
-                captureScreen(to: "\(dir)/menubar-worldClock.png", around: StatusItems.shared?.mainWindow)
+                for style in WorldClockMenuStyle.allCases {
+                    WorldClock.shared.menuBarStyle = style
+                    try? await Task.sleep(for: .seconds(0.3))
+                    captureScreen(to: "\(dir)/menubar-worldClock-\(style.rawValue).png", around: StatusItems.shared?.mainWindow)
+                }
+                WorldClock.shared.menuBarStyle = .flagAndTime
             }
             // The menu bar popover's width, where the tool picker wraps onto two rows.
             if only == nil || only?.contains("popover") == true {
@@ -102,7 +117,7 @@ enum Snapshot {
                 let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
                 window.contentView = host
                 window.orderFrontRegardless()
-                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark")] {
+                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark")] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     model.tool = tool
                     try? await Task.sleep(for: .seconds(0.8))

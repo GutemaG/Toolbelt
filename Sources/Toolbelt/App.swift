@@ -146,12 +146,15 @@ final class StatusItems {
         var onMain: [String] = []
         for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText)] {
             if let item = tools[tool] {
-                item.setTitle(text)
+                // A flag or a city name says what the icon would; the time alone needs it.
+                item.setTitle(text, hidesImage: tool == .worldClock && WorldClock.shared.menuBarStyle != .timeOnly)
             } else if let text {
                 onMain.append(text)
             }
         }
-        main?.setTitle(onMain.isEmpty ? nil : onMain.joined(separator: "   "))
+        // Two lines only work alone; beside a timer the city and time share one.
+        let title = onMain.count > 1 ? onMain.map { $0.replacingOccurrences(of: "\n", with: " ") } : onMain
+        main?.setTitle(title.isEmpty ? nil : title.joined(separator: "   "))
         tools[.system]?.setTitle(SystemMonitor.shared.menuBarText)
     }
 
@@ -207,12 +210,26 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
     }
 
     /// Text beside the icon, like a timer's time left. nil shows the icon alone.
-    func setTitle(_ text: String?) {
+    /// Text with a line break is drawn small on two lines, to fit the menu bar.
+    func setTitle(_ text: String?, hidesImage: Bool = false) {
         guard let button = item.button else { return }
-        button.title = text.map { " " + $0 } ?? ""
-        button.imagePosition = text == nil ? .imageOnly : .imageLeading
+        let image = text != nil && hidesImage
+        button.imagePosition = text == nil ? .imageOnly : image ? .noImage : .imageLeading
         item.length = text == nil ? NSStatusItem.squareLength : NSStatusItem.variableLength
-        if text != nil { button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular) }
+        if let text, text.contains("\n") {
+            let lines = NSMutableParagraphStyle()
+            lines.alignment = .center
+            lines.minimumLineHeight = 11
+            lines.maximumLineHeight = 11
+            button.attributedTitle = NSAttributedString(string: text, attributes: [
+                .font: NSFont.monospacedDigitSystemFont(ofSize: 10, weight: .medium),
+                .foregroundColor: NSColor.labelColor,
+                .paragraphStyle: lines,
+            ])
+        } else {
+            button.title = text.map { (image ? "" : " ") + $0 } ?? ""
+            if text != nil { button.font = .monospacedDigitSystemFont(ofSize: NSFont.systemFontSize, weight: .regular) }
+        }
     }
 
     var title: String { item.button?.title ?? "" }

@@ -43,6 +43,10 @@ struct ToolbeltView: View {
                 SystemGauges(window: window)
                 Divider()
             }
+            if tool == .worldClock {
+                LocalTimeRow()
+                Divider()
+            }
             if tool == .info {
                 InfoView(surface: surface, query: query)
             } else if tool == .camera {
@@ -53,6 +57,10 @@ struct ToolbeltView: View {
                 VolumeMixerView(surface: surface, window: window, query: query)
             } else {
                 results
+            }
+            if tool == .worldClock {
+                Divider()
+                TimeTravelBar()
             }
             Divider()
             footer
@@ -69,6 +77,7 @@ struct ToolbeltView: View {
             query = ""
             selected = 0
             model.pickingApps = false
+            WorldClock.shared.travel = 0
             if tool == .launcher { model.apps.refresh() }
         }
         .onChange(of: query) { selected = 0 }
@@ -162,7 +171,7 @@ struct ToolbeltView: View {
         case .recording: return "Search Recordings"
         case .launcher: return model.pickingApps ? "Search Apps to Pin" : "Search Apps"
         case .mixer: return "Search Apps"
-        case .worldClock: return "Search Cities"
+        case .worldClock: return "Search or Add Cities"
         default: return "Search \(tool.title)"
         }
     }
@@ -208,6 +217,7 @@ struct ToolbeltView: View {
                                     .onTapGesture { activate(entry, plainText: false) }
                                     .onHover { if $0 { selected = start + offset } }
                                     .contextMenu { menu(for: entry) }
+                                    .reorderable(entry)
                             }
                         }
                     }
@@ -441,6 +451,8 @@ struct ToolbeltView: View {
             let clock = WorldClock.shared
             if clock.cities.contains(city) {
                 Button(clock.menuBarCity == city ? "Remove from Menu Bar" : "Show in Menu Bar") { clock.toggleMenuBar(city) }
+                Button("Move Up") { clock.move(city, by: -1) }
+                Button("Move Down") { clock.move(city, by: 1) }
                 Divider()
                 Button("Remove City", role: .destructive) { clock.remove(city) }
                     .keyboardShortcut(.delete)
@@ -608,8 +620,11 @@ struct ToolbeltView: View {
                 let clock = WorldClock.shared
                 let saved = clock.cities.filter { FuzzyMatch.match(query, in: $0.name) != nil }
                 if !saved.isEmpty { result.append(Section(title: "Your Cities", entries: saved.map(Entry.city))) }
-                let more = WorldClockRules.search(query, excluding: clock.cities)
-                if !more.isEmpty { result.append(Section(title: "Add a City", entries: more.map(Entry.city))) }
+                // Suggestions only until you have a city; after that, typing finds more.
+                if !query.isEmpty || clock.cities.isEmpty {
+                    let more = WorldClockRules.search(query, excluding: clock.cities)
+                    if !more.isEmpty { result.append(Section(title: "Add a City", entries: more.map(Entry.city))) }
+                }
             default:
                 break
             }
@@ -622,6 +637,7 @@ struct ToolbeltView: View {
     // MARK: Actions
 
     func reset() {
+        WorldClock.shared.travel = 0
         model.pickingApps = false
         query = ""
         selected = 0
