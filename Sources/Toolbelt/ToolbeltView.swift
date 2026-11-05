@@ -112,7 +112,11 @@ struct ToolbeltView: View {
             } else if tool == .calendar {
                 CalendarView(surface: surface, query: query)
             } else if tool == .nowPlaying {
-                NowPlayingView(surface: surface)
+                NowPlayingView(surface: surface, window: window)
+            } else if tool == .quickNote {
+                QuickNoteView(surface: surface)
+            } else if tool == .networkSpeed {
+                NetworkSpeedView(window: window)
             } else if tool == .camera {
                 CameraView(surface: surface, window: window)
             } else if tool == .knock {
@@ -180,7 +184,7 @@ struct ToolbeltView: View {
             if usesTitleMenu {
                 ToolMenuButton(tool: tool, isOpen: toolMenuOpen, action: toggleToolMenu)
             }
-            if tool == .camera || tool == .knock {
+            if tool == .camera || tool == .knock || tool == .quickNote || tool == .networkSpeed {
                 // Nothing to search: the row keeps the title, unless the switcher already says it.
                 if usesTitleMenu {
                     Spacer(minLength: 0)

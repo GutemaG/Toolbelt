@@ -220,6 +220,30 @@ enum Snapshot {
                     capture(to: "\(dir)/panel-nowPlaying-empty-\(mode).png", window: PanelController.shared.panel)
                     NowPlaying.shared.usesSample = true
                     PanelController.shared.hide()
+                    NetworkSpeed.shared.speedTest = .running(since: .now.addingTimeInterval(-12))
+                    PanelController.shared.show(.networkSpeed)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-networkSpeed-testing-\(mode).png", window: PanelController.shared.panel)
+                    NetworkSpeed.shared.speedTest = .finished(NetworkSpeed.sampleResult, at: .now.addingTimeInterval(-120))
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-networkSpeed-result-\(mode).png", window: PanelController.shared.panel)
+                    NetworkSpeed.shared.speedTest = .failed
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-networkSpeed-failed-\(mode).png", window: PanelController.shared.panel)
+                    NetworkSpeed.shared.speedTest = .idle
+                    PanelController.shared.hide()
+                    model.newNote()
+                    PanelController.shared.show(.quickNote)
+                    try? await Task.sleep(for: .seconds(0.8))
+                    capture(to: "\(dir)/panel-quickNote-new-\(mode).png", window: PanelController.shared.panel)
+                    model.writingNewNote = false
+                    if let note = model.currentNote() {
+                        model.deleteNote(note)
+                        try? await Task.sleep(for: .seconds(0.8))
+                        capture(to: "\(dir)/panel-quickNote-undo-\(mode).png", window: PanelController.shared.panel)
+                        model.undoDeleteNote()
+                    }
+                    PanelController.shared.hide()
                 }
             }
             // The menu bar popover's width, where the tool picker wraps onto two rows.
@@ -231,7 +255,7 @@ enum Snapshot {
                 let window = NSWindow(contentRect: CGRect(x: 200, y: 200, width: 440, height: 480), styleMask: [.titled], backing: .buffered, defer: false)
                 window.contentView = host
                 window.orderFrontRegardless()
-                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark"), (.timer, "light"), (.timer, "dark"), (.pomodoro, "light"), (.pomodoro, "dark"), (.calendar, "light"), (.calendar, "dark"), (.nowPlaying, "light"), (.nowPlaying, "dark")] {
+                for (tool, mode) in [(Tool.knock, "light"), (.launcher, "dark"), (.worldClock, "light"), (.worldClock, "dark"), (.timer, "light"), (.timer, "dark"), (.pomodoro, "light"), (.pomodoro, "dark"), (.calendar, "light"), (.calendar, "dark"), (.nowPlaying, "light"), (.nowPlaying, "dark"), (.quickNote, "light"), (.quickNote, "dark"), (.networkSpeed, "light"), (.networkSpeed, "dark")] {
                     NSApp.appearance = NSAppearance(named: mode == "light" ? .aqua : .darkAqua)
                     model.tool = tool
                     try? await Task.sleep(for: .seconds(0.8))

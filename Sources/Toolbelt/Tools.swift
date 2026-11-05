@@ -4,7 +4,7 @@ import SwiftUI
 /// Every tool in Toolbelt. Settings pages, menu bar icons, shortcuts and the
 /// panel picker all read from this, so a new tool shows up everywhere at once.
 enum Tool: String, CaseIterable, Identifiable {
-    case launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, keepAwake
+    case launcher, clipboard, snippets, quickNote, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, networkSpeed, keepAwake
 
     var id: String { rawValue }
 
@@ -13,6 +13,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .launcher: "Launcher"
         case .clipboard: "Clipboard"
         case .snippets: "Snippets"
+        case .quickNote: "Quick Note"
         case .screenshots: "Screenshots"
         case .recording: "Recording"
         case .colors: "Colors"
@@ -29,6 +30,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .knock: "Knock"
         case .system: "System"
         case .info: "Info"
+        case .networkSpeed: "Network Speed"
         case .keepAwake: "Keep Awake"
         }
     }
@@ -38,6 +40,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .launcher: "magnifyingglass"
         case .clipboard: "doc.on.clipboard"
         case .snippets: "text.quote"
+        case .quickNote: "note.text"
         case .screenshots: "camera.viewfinder"
         case .recording: "record.circle"
         case .colors: "eyedropper"
@@ -54,6 +57,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .knock: "hand.tap"
         case .system: "gauge.with.dots.needle.50percent"
         case .info: "info.circle"
+        case .networkSpeed: "arrow.up.arrow.down"
         case .keepAwake: "cup.and.saucer"
         }
     }
@@ -64,6 +68,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .launcher: "Find and open apps, with your pinned apps on top."
         case .clipboard: "Search everything you copied and paste it again."
         case .snippets: "Saved text you paste by keyword or search."
+        case .quickNote: "Jot something down, saved as you type."
         case .screenshots: "Capture an area, a window or the whole screen."
         case .recording: "Record an area, a window or the screen to a movie."
         case .colors: "Pick any color on the screen and copy it."
@@ -80,6 +85,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .knock: "Knock on the MacBook to play music, take a screenshot and more."
         case .system: "CPU, memory, temperature, fans, and the apps using the most energy."
         case .info: "Battery health, storage, hardware, network, and your developer tools."
+        case .networkSpeed: "Live upload and download speed, and a speed test."
         case .keepAwake: "Stop the Mac from sleeping for a while."
         }
     }
@@ -90,6 +96,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .launcher: .blue
         case .clipboard: .orange
         case .snippets: .mint
+        case .quickNote: .brown
         case .screenshots: .purple
         case .recording: .red
         case .colors: .teal
@@ -106,6 +113,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .knock: .purple
         case .system: .pink
         case .info: .blue
+        case .networkSpeed: .cyan
         case .keepAwake: .brown
         }
     }
@@ -115,6 +123,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .launcher: "Find and open apps"
         case .clipboard: "Search clipboard history"
         case .snippets: "Paste a snippet"
+        case .quickNote: "Write a quick note"
         case .screenshots: "Take a screenshot"
         case .recording: "Record the screen"
         case .colors: "Pick a color"
@@ -131,6 +140,7 @@ enum Tool: String, CaseIterable, Identifiable {
         case .knock: "Run actions by knocking on the Mac"
         case .system: "See CPU and energy use"
         case .info: "See details about this Mac"
+        case .networkSpeed: "See your network speed"
         case .keepAwake: "Keep the Mac awake"
         }
     }

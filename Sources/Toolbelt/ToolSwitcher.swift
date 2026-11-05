@@ -37,7 +37,7 @@ struct ToolTiles: View {
     private var size: CGFloat { Space.section }
     /// How many tiles fit on one row of the panel, at 32 pt with a 4 pt gap.
     private static let panelRow = 17
-    private var gap: CGFloat { surface == .panel ? Space.xs : Space.sm }
+    private var gap: CGFloat { Space.xs }
     private var perRow: Int { surface == .panel && tools.count <= Self.panelRow ? max(tools.count, 1) : max((tools.count + 1) / 2, 1) }
 
     var body: some View {

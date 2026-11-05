@@ -83,6 +83,16 @@ final class AppModel {
     var soundTick = 0
     /// The snippet open in Settings > Snippets.
     var editingSnippet: UUID?
+    /// The note in Quick Note's editor; nil means the newest.
+    var currentNoteID: UUID?
+    /// Quick Note shows a new note, not saved until something is typed.
+    var writingNewNote = false
+    /// Changes when the editor moves to another note.
+    var noteEditorID = UUID()
+    /// The last note deleted, for Undo.
+    var deletedNote: DeletedNote?
+    /// What Copy last put on the clipboard, for the self-test.
+    @ObservationIgnored var lastCopiedNote: String?
     /// Colors picked, newest first, as "#RRGGBB".
     var recentColors: [String] = []
 

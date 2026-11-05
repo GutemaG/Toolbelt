@@ -636,3 +636,72 @@ private func gregorian(firstWeekday: Int) -> Calendar {
     #expect(NowPlayingRules.clock(3725) == "1:02:05")
     #expect(NowPlayingRules.clock(-4) == "0:00")
 }
+
+@Test func networkCountsOnlyRealInterfaces() {
+    for name in ["en0", "en12", "pdp_ip0"] { #expect(NetworkRules.countsTraffic(interface: name)) }
+    for name in ["lo0", "utun3", "awdl0", "llw0", "bridge0", "anpi1", "gif0", "stf0", "ap1", "en", "enx"] { #expect(!NetworkRules.countsTraffic(interface: name)) }
+}
+
+@Test func networkRateFromCounters() {
+    #expect(NetworkRules.rate(from: 1_000, to: 3_000, seconds: 2) == 1_000)
+    #expect(NetworkRules.rate(from: 5_000, to: 10, seconds: 1) == nil)
+    #expect(NetworkRules.rate(from: 1, to: 2, seconds: 0) == nil)
+    #expect(NetworkRules.rate(from: 4_294_967_296, to: 4_294_967_396, seconds: 1) == 100)
+}
+
+@Test func networkSpeedWords() {
+    #expect(NetworkRules.speed(0, unit: .bytes) == "0 KB/s")
+    #expect(NetworkRules.speed(-5, unit: .bytes) == "0 KB/s")
+    #expect(NetworkRules.speed(340_000, unit: .bytes) == "340 KB/s")
+    #expect(NetworkRules.speed(999_700, unit: .bytes) == "1.0 MB/s")
+    #expect(NetworkRules.speed(12_400_000, unit: .bytes) == "12.4 MB/s")
+    #expect(NetworkRules.speed(250_000_000, unit: .bytes) == "250 MB/s")
+    #expect(NetworkRules.speed(1_500_000_000, unit: .bytes) == "1.5 GB/s")
+    #expect(NetworkRules.speed(39_000_000, unit: .bits) == "312 Mbps")
+    #expect(NetworkRules.speed(1_000, unit: .bits) == "8 Kbps")
+}
+
+@Test func networkMenuBarKeepsItsWidth() {
+    func width(_ down: Double, _ up: Double) -> [Int] {
+        NetworkRules.menuBarText(down: down, up: up, unit: .bytes).split(separator: "\n").map(\.count)
+    }
+    #expect(width(0, 12_400_000) == [11, 11])
+    #expect(width(999_000, 340_000) == [11, 11])
+    let text = NetworkRules.menuBarText(down: 2_000_000, up: 0, unit: .bytes)
+    #expect(text.hasPrefix("↑"))
+    #expect(text.contains("\n↓"))
+}
+
+@Test func networkReadsTheSpeedTest() {
+    // The shape networkQuality -c printed on macOS 27.
+    let output = #"{"base_rtt":372.2394,"dl_flows":16,"dl_throughput":28742558,"interface_name":"en0","responsiveness":44.65755,"ul_throughput":54356060}"#
+    let result = NetworkRules.parseSpeedTest("warning: something\n" + output + "\n")
+    #expect(result?.downloadBitsPerSecond == 28_742_558)
+    #expect(result?.uploadBitsPerSecond == 54_356_060)
+    #expect(result?.latencyMilliseconds == 372.2394)
+    #expect(abs((result?.loadedLatencyMilliseconds ?? 0) - 1343.5) < 1)
+    #expect(NetworkRules.parseSpeedTest("Error: no connection") == nil)
+    #expect(NetworkRules.parseSpeedTest(#"{"error_code":1}"#) == nil)
+    #expect(NetworkRules.parseSpeedTest(#"{"dl_throughput":0,"ul_throughput":0}"#) == nil)
+}
+
+@Test func networkLatencyWords() {
+    #expect(NetworkRules.latency(14.2) == "14 ms")
+    #expect(NetworkRules.latency(1343.5) == "1.3 s")
+}
+
+@Test func noteTitles() {
+    #expect(NoteRules.title("Groceries\neggs") == "Groceries")
+    #expect(NoteRules.title("\n  \n  Second line  \nmore") == "Second line")
+    #expect(NoteRules.title("") == "New Note")
+    #expect(NoteRules.title(" \n\t") == "New Note")
+}
+
+@Test func noteBlankAndWordCount() {
+    #expect(NoteRules.isBlank(""))
+    #expect(NoteRules.isBlank(" \n\t"))
+    #expect(!NoteRules.isBlank(" a "))
+    #expect(NoteRules.wordCount("") == "0 words")
+    #expect(NoteRules.wordCount("one") == "1 word")
+    #expect(NoteRules.wordCount("one two\nthree") == "3 words")
+}

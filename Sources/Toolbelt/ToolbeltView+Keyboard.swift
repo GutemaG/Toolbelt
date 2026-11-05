@@ -85,9 +85,29 @@ extension ToolbeltView {
         return true
     }
 
+    /// Quick Note's editor keeps its typing keys. nil lets the usual handling
+    /// have the few shared keys: Escape, and Command with a tool number, T, comma or Q.
+    func handleNoteKey(_ keyCode: UInt16, flags: NSEvent.ModifierFlags) -> Bool? {
+        let command = flags.contains(.command), shift = flags.contains(.shift)
+        switch keyCode {
+        case 53: return nil // Escape
+        case 45 where command && !shift: model.newNote() // Command-N
+        case 33 where command && !shift: model.stepNote(by: -1) // Command-[
+        case 30 where command && !shift: model.stepNote(by: 1) // Command-]
+        case 8 where command && shift: // Command-Shift-C
+            if let note = model.currentNote() { model.copyNote(note) }
+        case 51 where command && shift: // Command-Shift-Delete
+            if let note = model.currentNote() { model.deleteNote(note) }
+        case 17, 43, 12: return command && !shift ? nil : false // Command-T, Command-comma, Command-Q
+        default: return command && !shift && Self.digitKeys.contains(keyCode) ? nil : false
+        }
+        return true
+    }
+
     func handle(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if toolMenuOpen, usesTitleMenu, !flags.contains(.command), handleToolMenu(event.keyCode) { return true }
+        if tool == .quickNote, let handled = handleNoteKey(event.keyCode, flags: flags) { return handled }
         let entries = flatEntries
         let current = entries.indices.contains(selected) ? entries[selected] : nil
         switch (event.keyCode, flags.contains(.command)) {
@@ -103,6 +123,7 @@ extension ToolbeltView {
             }
         case (124, true) where tool == .pomodoro: PomodoroTool.shared.skip() // Command-Right
         case (15, true) where tool == .pomodoro: PomodoroTool.shared.reset() // Command-R
+        case (36, _) where tool == .networkSpeed, (76, _) where tool == .networkSpeed: NetworkSpeed.shared.toggleTest() // Return
         case (36, _) where tool == .nowPlaying, (76, _) where tool == .nowPlaying: NowPlaying.shared.send(.playPause) // Return
         case (123, false) where tool == .nowPlaying && query.isEmpty: NowPlaying.shared.send(.previous) // Left
         case (124, false) where tool == .nowPlaying && query.isEmpty: NowPlaying.shared.send(.next) // Right

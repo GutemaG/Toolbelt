@@ -54,6 +54,7 @@ struct SettingsView: View {
             case .launcher: ToolSettings(tool: .launcher)
             case .clipboard: ToolSettings(tool: .clipboard)
             case .snippets: ToolSettings(tool: .snippets)
+            case .quickNote: ToolSettings(tool: .quickNote)
             case .screenshots: ToolSettings(tool: .screenshots)
             case .recording: ToolSettings(tool: .recording)
             case .colors: ToolSettings(tool: .colors)
@@ -70,6 +71,7 @@ struct SettingsView: View {
             case .knock: ToolSettings(tool: .knock)
             case .system: ToolSettings(tool: .system)
             case .info: ToolSettings(tool: .info)
+            case .networkSpeed: ToolSettings(tool: .networkSpeed)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
             }
@@ -99,7 +101,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, quickNote, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, networkSpeed, keepAwake, appearance
 
     var id: String { rawValue }
 
@@ -108,10 +110,10 @@ enum SettingsPage: String, CaseIterable, Identifiable {
     var group: SettingsGroup {
         switch self {
         case .settings: .top
-        case .launcher, .clipboard, .snippets: .input
+        case .launcher, .clipboard, .snippets, .quickNote: .input
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
-        case .timer, .pomodoro, .calendar, .worldClock, .nowPlaying, .sound, .mixer, .toggles, .knock, .system, .info, .keepAwake: .tools
+        case .timer, .pomodoro, .calendar, .worldClock, .nowPlaying, .sound, .mixer, .toggles, .knock, .system, .info, .networkSpeed, .keepAwake: .tools
         case .appearance: .app
         }
     }
@@ -451,6 +453,10 @@ struct ToolSettings: View {
             PomodoroOptions()
         case .nowPlaying:
             NowPlayingOptions()
+        case .quickNote:
+            QuickNoteOptions()
+        case .networkSpeed:
+            NetworkSpeedOptions()
         case .calendar:
             Section {
             } footer: {

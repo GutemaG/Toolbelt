@@ -488,6 +488,147 @@ enum SelfTest {
             }
             playing.stop()
 
+            // S-090 Now Playing stops by itself once its panel is hidden, where onDisappear never comes.
+            let hiddenWindow = NSWindow()
+            var hiddenShown = ShownWindows()
+            hiddenShown.watch(hiddenWindow)
+            check("a tool's window counts as shown just after opening, even before it's visible", hiddenShown.isShown)
+            hiddenWindow.makeKeyAndOrderFront(nil)
+            check("a visible window counts as shown", hiddenWindow.isVisible && hiddenShown.isShown)
+            hiddenWindow.orderOut(nil)
+            try? await Task.sleep(for: .seconds(1.7))
+            check("a hidden window stops counting as shown", !hiddenShown.isShown)
+
+            // S-092 Network Speed: speeds from counters, samples only, and no test goes online
+            let net = NetworkSpeed.shared
+            let realCounters = NetworkCounters.read()
+            check("this Mac's byte counters can be read", realCounters.received > 0 || realCounters.sent > 0, "\(realCounters)")
+            // The same as macOS's own count, give or take what moved between the two readings.
+            // netstat sees the full totals; apps may get them wrapped at 4 GB.
+            if let listing = await Shell.run("/usr/sbin/netstat", ["-ibn"]) {
+                var received: UInt64 = 0, sent: UInt64 = 0
+                for line in listing.output.split(separator: "\n") where line.contains("<Link#") {
+                    let columns = line.split(whereSeparator: \.isWhitespace)
+                    guard columns.count >= 7, NetworkRules.countsTraffic(interface: String(columns[0])) else { continue }
+                    received += (UInt64(columns[columns.count - 5]) ?? 0) % (1 << 32)
+                    sent += (UInt64(columns[columns.count - 2]) ?? 0) % (1 << 32)
+                }
+                let counted = NetworkCounters.read()
+                let slack: Int64 = 50_000_000
+                func close(_ count: UInt64, _ other: UInt64) -> Bool {
+                    abs(Int64(count % (1 << 32)) - Int64(other)) < slack
+                }
+                check("the counters match netstat", close(counted.received, received) && close(counted.sent, sent),
+                      "counters \(counted.received)/\(counted.sent), netstat \(received)/\(sent)")
+            }
+            // The real loop: reads this Mac while a window shows, and stops once it's hidden.
+            let liveWindow = NSWindow()
+            liveWindow.makeKeyAndOrderFront(nil)
+            net.usesSamples = false
+            net.watch(liveWindow)
+            try? await Task.sleep(for: .seconds(2.2))
+            check("the live loop reads while the tool shows", net.isReading && !net.history.isEmpty && net.down != nil, "\(net.history.count) readings")
+            check("the connection is known", net.connection != .unknown)
+            liveWindow.orderOut(nil)
+            try? await Task.sleep(for: .seconds(2.5))
+            check("the live loop stops once its window is hidden", !net.isReading)
+            net.usesSamples = true
+            let netStart = Date.now
+            net.record(NetworkCounters(received: 1_000, sent: 500), at: netStart)
+            net.record(NetworkCounters(received: 3_001_000, sent: 1_000_500), at: netStart.addingTimeInterval(1))
+            check("speed is the bytes since the last reading", net.down == 3_000_000 && net.up == 1_000_000)
+            net.record(NetworkCounters(received: 5, sent: 5), at: netStart.addingTimeInterval(2))
+            check("a counter that went back holds the last speed, with no dip or spike", net.down == 3_000_000 && net.up == 1_000_000)
+            for second in 3..<70 { net.record(NetworkCounters(), at: netStart.addingTimeInterval(Double(second))) }
+            check("the chart keeps one minute", net.history.count == NetworkSpeed.historyLength)
+            check("without the setting the menu bar shows no speed", net.menuBarText == nil)
+            net.menuBar = true
+            StatusItems.shared?.refreshIcons()
+            check("the menu bar shows both directions", net.menuBarText?.contains("↑") == true && net.menuBarText?.contains("↓") == true
+                  && StatusItems.shared?.mainTitle.contains("↓") == true, StatusItems.shared?.mainTitle ?? "")
+            net.unit = .bits
+            check("the unit setting reaches the menu bar", net.menuBarText?.contains("Kbps") == true, net.menuBarText ?? "")
+            net.unit = .bytes
+            net.menuBar = false
+            StatusItems.shared?.refreshIcons()
+            check("turning the setting off clears the menu bar", StatusItems.shared?.mainTitle.contains("↓") == false)
+            net.toggleTest()
+            if case .finished(let result, _) = net.speedTest {
+                check("a test run shows the sample result and doesn't go online", result == NetworkSpeed.sampleResult)
+            } else {
+                check("a test run shows the sample result and doesn't go online", false)
+            }
+            net.speedTest = .idle
+            let stopper = ShellHandle()
+            let stoppedAt = Date.now
+            async let slept = Shell.run("/bin/sleep", ["30"], timeout: 60, handle: stopper)
+            try? await Task.sleep(for: .milliseconds(300))
+            stopper.stop()
+            let stoppedResult = await slept
+            check("Stop ends a running command at once", stoppedResult?.status != 0 && Date.now.timeIntervalSince(stoppedAt) < 5)
+
+            // S-091 Quick Note: real typing through the panel's key handling
+            for note in model.allNotes() { model.context.delete(note) }
+            try? model.context.save()
+            model.currentNoteID = nil
+            model.writingNewNote = false
+            PanelController.shared.show(.quickNote)
+            try? await Task.sleep(for: .seconds(0.6))
+            check("Quick Note opens ready to type", PanelController.shared.panel.firstResponder is NSTextView,
+                  "\(String(describing: PanelController.shared.panel.firstResponder))")
+            @MainActor func press(_ text: String, keyCode: UInt16, _ flags: NSEvent.ModifierFlags = []) async {
+                // The panel closes when another app takes focus, which someone using this Mac can cause mid-run.
+                if !PanelController.shared.panel.isKeyWindow {
+                    PanelController.shared.show(.quickNote)
+                    try? await Task.sleep(for: .seconds(0.3))
+                }
+                guard let event = NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: flags, timestamp: ProcessInfo.processInfo.systemUptime,
+                                                   windowNumber: PanelController.shared.panel.windowNumber, context: nil,
+                                                   characters: text, charactersIgnoringModifiers: text, isARepeat: false, keyCode: keyCode) else { return }
+                NSApp.postEvent(event, atStart: false)
+                try? await Task.sleep(for: .milliseconds(150))
+            }
+            check("nothing is saved until you type", model.allNotes().isEmpty)
+            await press("h", keyCode: 4)
+            await press("i", keyCode: 34)
+            check("typing saves a note", model.allNotes().first?.text == "hi", model.allNotes().first?.text ?? "none")
+            await press("\r", keyCode: 36)
+            await press("x", keyCode: 7)
+            check("Return makes a new line, not an action", model.allNotes().first?.text == "hi\nx", model.allNotes().first?.text ?? "none")
+            await press("\u{F702}", keyCode: 123)
+            await press("y", keyCode: 16)
+            check("arrow keys move the cursor in the text", model.allNotes().first?.text == "hi\nyx", model.allNotes().first?.text ?? "none")
+            await press("\t", keyCode: 48)
+            check("Tab stays in the note and doesn't switch tools", model.tool == .quickNote)
+            let firstNote = model.allNotes().first
+            await press("n", keyCode: 45, .command)
+            check("⌘N starts a new note, unsaved", model.currentNote() == nil && model.allNotes().count == 1)
+            try? await Task.sleep(for: .seconds(0.3))
+            check("the new note is ready to type", PanelController.shared.panel.firstResponder is NSTextView)
+            await press("z", keyCode: 6)
+            check("typing there saves a second note", model.allNotes().count == 2 && model.currentNote()?.text == "z", model.currentNote()?.text ?? "none")
+            let secondNote = model.currentNote()
+            await press("]", keyCode: 30, .command)
+            check("⌘] moves down the list", model.currentNote() == firstNote && firstNote != nil)
+            await press("]", keyCode: 30, .command)
+            check("⌘] stops at the end", model.currentNote() == firstNote)
+            await press("[", keyCode: 33, .command)
+            check("⌘[ moves back up", model.currentNote() == secondNote)
+            await press("]", keyCode: 30, .command)
+            await press("c", keyCode: 8, [.command, .shift])
+            check("⌘⇧C copies the note", model.lastCopiedNote == firstNote?.text && firstNote != nil)
+            let deletedText = model.currentNote()?.text
+            await press("\u{7F}", keyCode: 51, [.command, .shift])
+            check("⌘⇧⌫ deletes the note and offers Undo", model.allNotes().count == 1 && model.deletedNote?.text == deletedText)
+            model.undoDeleteNote()
+            check("Undo brings it back", model.allNotes().count == 2 && model.currentNote()?.text == deletedText && model.deletedNote == nil)
+            if let note = model.currentNote() { model.setNoteText("   ") ; check("a note can be emptied while you're on it", note.text == "   ") }
+            model.newNote()
+            check("a note left empty is removed", model.allNotes().count == 1)
+            await press("\u{1B}", keyCode: 53)
+            check("esc closes the panel, and the note stays", !PanelController.shared.isVisible && model.allNotes().count == 1)
+            PanelController.shared.hide()
+
             // S-076 System: read only, nothing is quit
             let sensors = SystemSensors()
             _ = await sensors.read(processes: true)

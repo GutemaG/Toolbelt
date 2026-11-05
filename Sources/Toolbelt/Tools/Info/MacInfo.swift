@@ -208,7 +208,7 @@ final class MacInfo {
 
 /// Runs a command with a time limit, stdout and stderr together, no input.
 nonisolated enum Shell {
-    static func run(_ path: String, _ arguments: [String], environment: [String: String]? = nil, timeout: TimeInterval = 5) async -> (output: String, status: Int32)? {
+    static func run(_ path: String, _ arguments: [String], environment: [String: String]? = nil, timeout: TimeInterval = 5, handle: ShellHandle? = nil) async -> (output: String, status: Int32)? {
         await withCheckedContinuation { continuation in
             // Blocking reads stay off Swift's small thread pool.
             DispatchQueue.global(qos: .userInitiated).async {
@@ -224,6 +224,7 @@ nonisolated enum Shell {
                     continuation.resume(returning: nil)
                     return
                 }
+                handle?.attach(process)
                 let stop = DispatchWorkItem { if process.isRunning { process.terminate() } }
                 DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: stop)
                 let data = pipe.fileHandleForReading.readDataToEndOfFile()
@@ -246,6 +247,27 @@ nonisolated enum Shell {
         guard let result = await run(path, arguments),
               let value = try? PropertyListSerialization.propertyList(from: Data(result.output.utf8), format: nil) as? [String: Any] else { return [:] }
         return value
+    }
+}
+
+/// Lets the one who started a command stop it early.
+nonisolated final class ShellHandle: @unchecked Sendable {
+    private let lock = NSLock()
+    private var process: Process?
+    private var stopped = false
+
+    func attach(_ process: Process) {
+        lock.withLock {
+            self.process = process
+            if stopped, process.isRunning { process.terminate() }
+        }
+    }
+
+    func stop() {
+        lock.withLock {
+            stopped = true
+            if let process, process.isRunning { process.terminate() }
+        }
     }
 }
 

@@ -71,6 +71,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if prefs.enabled.contains(.mixer) { VolumeMixer.shared.resume() } else { VolumeMixer.shared.stopAll() }
         SystemMonitor.shared.menuBar = prefs.enabled.contains(.system) && prefs.ownIcon.contains(.system)
             && UserDefaults.standard.object(forKey: SystemMonitor.menuBarKey) as? Bool ?? true
+        NetworkSpeed.shared.menuBar = !Store.isOverridden && prefs.enabled.contains(.networkSpeed)
+            && UserDefaults.standard.bool(forKey: NetworkSpeed.menuBarKey)
         if !prefs.panelTools.contains(model.tool), let first = prefs.panelTools.first { model.tool = first }
 
         let policy: NSApplication.ActivationPolicy = prefs.showInDock ? .regular : .accessory
@@ -96,6 +98,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationWillTerminate(_ notification: Notification) {
         KeepAwake.shared?.stop()
         VolumeMixer.shared.stopAll()
+        NetworkSpeed.shared.stopTest()
         if SelfTest.requested { exit(SelfTest.exitCode) }
     }
 }
@@ -122,6 +125,7 @@ final class StatusItems {
         var wanted = Set(Tool.allCases.filter { prefs.enabled.contains($0) && prefs.ownIcon.contains($0) })
         // With the Toolbelt icon hidden, the city in the menu bar still needs an icon to sit on.
         if main == nil, WorldClock.shared.menuBarText != nil { wanted.insert(.worldClock) }
+        if main == nil, NetworkSpeed.shared.menuBar { wanted.insert(.networkSpeed) }
         for (tool, controller) in tools where !wanted.contains(tool) {
             controller.remove()
             tools[tool] = nil
@@ -144,10 +148,10 @@ final class StatusItems {
         // The city's time and the time left sit on their tool's own icon, or
         // side by side on the Toolbelt icon without one.
         var onMain: [String] = []
-        for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText), (.pomodoro, PomodoroTool.shared.menuBarText)] {
+        for (tool, text) in [(Tool.worldClock, WorldClock.shared.menuBarText), (.timer, TimerTool.shared?.menuBarText), (.pomodoro, PomodoroTool.shared.menuBarText), (.networkSpeed, NetworkSpeed.shared.menuBarText)] {
             if let item = tools[tool] {
-                // A flag or a city name says what the icon would; the time alone needs it.
-                item.setTitle(text, hidesImage: tool == .worldClock && WorldClock.shared.menuBarStyle != .timeOnly)
+                // A flag or a city name says what the icon would; the time alone needs it. The arrows say it too.
+                item.setTitle(text, hidesImage: tool == .networkSpeed || (tool == .worldClock && WorldClock.shared.menuBarStyle != .timeOnly))
             } else if let text {
                 onMain.append(text)
             }
@@ -408,7 +412,7 @@ enum Store {
 
     static func makeContainer() -> ModelContainer {
         do {
-            return try ModelContainer(for: ClipItem.self, AppLaunch.self, Capture.self, Snippet.self, configurations: ModelConfiguration(url: url))
+            return try ModelContainer(for: ClipItem.self, AppLaunch.self, Capture.self, Snippet.self, QuickNote.self, configurations: ModelConfiguration(url: url))
         } catch {
             fatalError("Could not open the database at \(url.path): \(error)")
         }

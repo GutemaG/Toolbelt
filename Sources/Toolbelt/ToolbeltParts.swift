@@ -152,3 +152,27 @@ struct QuickActionStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
+
+/// The windows showing a tool that only reads while it's on screen. A panel
+/// that is ordered out stays in memory and never gets onDisappear, so ask this
+/// on every reading.
+struct ShownWindows {
+    private struct Weak {
+        weak var window: NSWindow?
+    }
+
+    private var windows: [Weak] = []
+    /// A popover is not visible yet when it asks to be watched.
+    private var watchedAt = Date.distantPast
+
+    mutating func watch(_ window: NSWindow?) {
+        watchedAt = .now
+        guard let window else { return }
+        windows.removeAll { $0.window == nil || $0.window === window }
+        windows.append(Weak(window: window))
+    }
+
+    var isShown: Bool {
+        Date.now.timeIntervalSince(watchedAt) < 1.5 || windows.contains { $0.window?.isVisible == true }
+    }
+}

@@ -21,7 +21,7 @@ enum ToolActions {
     /// The grid title and tiles, or nil for tools with their own list (Launcher, Clipboard).
     static func grid(for tool: Tool, model: AppModel, query: String = "") -> (title: String, actions: [ToolAction])? {
         switch tool {
-        case .launcher, .clipboard, .system, .info, .camera, .mixer, .knock, .worldClock, .pomodoro, .calendar, .nowPlaying:
+        case .launcher, .clipboard, .system, .info, .camera, .mixer, .knock, .worldClock, .pomodoro, .calendar, .nowPlaying, .quickNote, .networkSpeed:
             return nil
         case .snippets:
             guard query.isEmpty else { return nil }
@@ -187,6 +187,8 @@ enum ToolActions {
         case .pomodoro: return "↩ Start or Pause   ⌘→ Skip   ⌘R Reset   Type a length like 25"
         case .calendar: return "Arrows Choose a Day   ⌘←→ Month   ↩ Today"
         case .nowPlaying: return "↩ Play or Pause   ←→ Previous or Next"
+        case .quickNote: return "⌘N New   ⌘[ ⌘] Switch   ⌘⇧C Copy   ⌘⇧⌫ Delete"
+        case .networkSpeed: return NetworkSpeed.shared.isTesting ? "↩ Stop the Test" : "↩ Test Speed   Hover a chart for any moment"
         case .worldClock: return "↑↓ Choose   ↩ Add or Show   ←→ Time   ⌘↑↓ Move   ⌘⌫ Remove"
         case .keepAwake: return "↩ Start   Click Turn Off to let the Mac sleep"
         }

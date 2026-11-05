@@ -17,6 +17,7 @@ final class NowPlaying {
     /// macOS refused the script: Automation is off for this player.
     private(set) var needsPermission = false
 
+    @ObservationIgnored private var shown = ShownWindows()
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
     @ObservationIgnored private var polling: Task<Void, Never>?
     @ObservationIgnored private var artworkKey: String?
@@ -28,13 +29,14 @@ final class NowPlaying {
     /// Long enough to answer the Automation question, which the script waits on.
     private static let scriptTimeout: TimeInterval = 60
 
-    /// The tool opened.
-    func start() {
+    /// The tool opened in a window.
+    func start(window: NSWindow? = nil) {
         if Store.isOverridden {
             if track == nil, usesSample { track = Self.sample }
             readAt = .now
             return
         }
+        shown.watch(window)
         if observers.isEmpty {
             observers = MusicPlayer.allCases.map { player in
                 DistributedNotificationCenter.default().addObserver(forName: .init(player.changeNotification), object: nil, queue: .main) { _ in
@@ -48,6 +50,11 @@ final class NowPlaying {
             while !Task.isCancelled {
                 try? await Task.sleep(for: Self.pollGap)
                 guard !Task.isCancelled else { return }
+                // Closing the panel only hides it, so the view's onDisappear doesn't come.
+                guard self?.shown.isShown == true else {
+                    self?.stop()
+                    return
+                }
                 self?.read()
             }
         }
@@ -183,6 +190,7 @@ final class NowPlaying {
 
 struct NowPlayingView: View {
     let surface: Surface
+    let window: NSWindow?
     @Environment(AppModel.self) private var model
     private var player: NowPlaying { .shared }
 
@@ -195,9 +203,10 @@ struct NowPlayingView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .onAppear { player.start() }
+        .onAppear { player.start(window: window) }
         .onDisappear { player.stop() }
-        .onChange(of: model.openCount) { player.start() }
+        .onChange(of: window) { player.start(window: window) }
+        .onChange(of: model.openCount) { player.start(window: window) }
     }
 
     private func playing(_ track: NowPlayingTrack) -> some View {

@@ -726,13 +726,38 @@ UX:
 - Words: "Local Time", "Today, +3h", "UTC-5", "Now", "+5h 15m from now", "Day in New York", "Your Day", "Work", "Morning, Evening", "Night", "Flag and Time", "City Above Time"
 Status: done
 
+### S-091 Write a quick note
+As the user, I open Quick Note from anywhere with ⌃⌥N and start typing with no extra step; it saves as I type, I keep several notes, and I can copy or delete one, with Undo.
+Acceptance:
+- [unit] A note's title is its first line with something on it; blank is whitespace only; word counts.
+- [self] Real key presses in the panel: opens ready to type; nothing saved until the first character; Return, arrows and Tab stay in the text; ⌘N, ⌘[ ⌘], ⌘⇧C, ⌘⇧⌫ act; Undo restores; a note left empty is removed; esc closes and keeps the note. A store from the previous version opens with its data intact.
+- [snap] panel-quickNote, panel-quickNote-new, panel-quickNote-undo, popover-quickNote, settings-quickNote.
+- [manual] ⌃⌥N from another app, then type at once; quit and reopen, and the text is still there; ⌘Z undoes typing but never crosses into another note.
+UX:
+- Flow: ⌃⌥N -> type -> esc; click a note on the left or ⌘[ ⌘] to switch; ⌘N for a new one
+- Surface: the shared panel and popover, Settings > Quick Note. Notes live in Toolbelt's database on this Mac.
+- Words: "New Note", "Write something…", "Not saved until you type", "Deleted", "Undo", "12 words"
+Status: done
+
+### S-092 See my network speed and test it
+As the user, I see my live download and upload speed with the last minute charted, can show them in the menu bar in MB/s or Mbps, and can run a speed test when I choose to.
+Acceptance:
+- [unit] Only Wi-Fi, Ethernet and cellular interfaces count; rates from counters, none when a counter goes back; speed words in both units; menu bar text keeps its width; the speed test's JSON, with warnings before it and without speeds.
+- [self] This Mac's counters read and match netstat; the live loop reads while its window shows and stops once hidden; a counter going back holds the last speed; a minute of history; the menu bar setting and unit; a test run shows a sample result and goes nowhere; Stop ends a running command at once.
+- [snap] panel-networkSpeed, -testing, -result, -failed, popover-networkSpeed, settings-networkSpeed.
+- [manual] A big download moves the Download number and chart; the menu bar speed follows with the window closed; Test Speed finishes with believable numbers; Stop ends it; hovering a chart names that moment.
+UX:
+- Flow: open the tool -> speeds and charts at once -> ↩ or Test Speed -> result; Settings > Network Speed for the menu bar and the unit
+- Surface: the shared panel and popover, the menu bar, Settings > Network Speed. Only the test goes online, and only when asked.
+- States: "Checking…", "No Connection"; test idle, "Testing…", result, "The Test Didn't Finish"
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
 - GIF export (V2 research). Scrolling capture that scrolls for you (needs Accessibility).
 - Window switcher, command palette. Fan control (needs a root helper).
 - Knock: sounds on a knock, custom key shortcuts, Shortcuts app actions.
-- Quick notes scratchpad.
 - Launcher search for files, system commands, and the web.
 - Copied Finder files in clipboard history.
 - iCloud sync between Macs.

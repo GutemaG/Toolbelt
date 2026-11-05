@@ -59,6 +59,15 @@ enum SeedData {
         ] {
             context.insert(Snippet(title: title, text: text, keyword: keyword))
         }
+        for (minutes, text) in [
+            (4, "Groceries\neggs\ncoffee\nolive oil\n\nCall the landlord about the heater before Friday."),
+            (90, "Book ideas: The Overstory, Piranesi"),
+            (1500, "Wi-Fi at the office is on the 3rd floor, ask at the front desk"),
+        ] {
+            let note = QuickNote(text: text)
+            note.updatedAt = Date.now.addingTimeInterval(Double(-minutes) * 60)
+            context.insert(note)
+        }
         let pinned = ["/Applications/Claude.app", "/Applications/Ghostty.app", "/Applications/Visual Studio Code.app",
                       "/Applications/Telegram.app", "/System/Applications/Calendar.app"]
         model.pinApps(paths: pinned.filter { FileManager.default.fileExists(atPath: $0) })

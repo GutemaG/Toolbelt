@@ -5,11 +5,11 @@ import ToolbeltKit
 /// Every global shortcut Toolbelt registers. Each belongs to a tool, has a
 /// default, and can be changed or cleared in that tool's Settings page.
 enum ShortcutID: Hashable, Identifiable {
-    case launcher, clipboard, snippets, shotArea, shotScreen, shotText, shotScroll, record, color
+    case launcher, clipboard, snippets, quickNote, shotArea, shotScreen, shotText, shotScroll, record, color
     case window(WindowPosition)
 
     static var all: [ShortcutID] {
-        [.launcher, .clipboard, .snippets, .shotArea, .shotScreen, .shotText, .shotScroll, .record, .color]
+        [.launcher, .clipboard, .snippets, .quickNote, .shotArea, .shotScreen, .shotText, .shotScroll, .record, .color]
             + WindowPosition.allCases.map(ShortcutID.window)
     }
 
@@ -21,6 +21,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: "launcher"
         case .clipboard: "clipboard"
         case .snippets: "snippets"
+        case .quickNote: "quickNote"
         case .shotArea: "shot.area"
         case .shotScreen: "shot.screen"
         case .shotText: "shot.text"
@@ -36,6 +37,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: "Open Launcher"
         case .clipboard: "Open Clipboard"
         case .snippets: "Open Snippets"
+        case .quickNote: "Open Quick Note"
         case .shotArea: "Capture an area or window"
         case .shotScreen: "Capture the whole screen"
         case .shotText: "Copy text from the screen"
@@ -51,6 +53,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: .launcher
         case .clipboard: .clipboard
         case .snippets: .snippets
+        case .quickNote: .quickNote
         case .shotArea, .shotScreen, .shotText, .shotScroll: .screenshots
         case .record: .recording
         case .color: .colors
@@ -64,6 +67,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: return KeyCombo(keyCode: 49, modifiers: KeyCombo.option)
         case .clipboard: return KeyCombo(keyCode: 9, modifiers: KeyCombo.command | KeyCombo.shift)
         case .snippets: return KeyCombo(keyCode: 1, modifiers: KeyCombo.control | KeyCombo.option)
+        case .quickNote: return KeyCombo(keyCode: 45, modifiers: KeyCombo.control | KeyCombo.option)
         case .shotArea: return KeyCombo(keyCode: 21, modifiers: ctrlShift)
         case .shotScreen: return KeyCombo(keyCode: 20, modifiers: ctrlShift)
         case .shotText: return KeyCombo(keyCode: 19, modifiers: ctrlShift)
@@ -80,6 +84,7 @@ enum ShortcutID: Hashable, Identifiable {
         case .launcher: PanelController.shared.toggle(.launcher)
         case .clipboard: PanelController.shared.toggle(.clipboard)
         case .snippets: PanelController.shared.toggle(.snippets)
+        case .quickNote: PanelController.shared.toggle(.quickNote)
         case .shotArea: CaptureController.shared.screenshot(.area)
         case .shotScreen: CaptureController.shared.screenshot(.screen)
         case .shotText: TextGrabber.shared.grab()
