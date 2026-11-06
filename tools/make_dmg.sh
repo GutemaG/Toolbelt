@@ -12,6 +12,9 @@ volume="/Volumes/$name"
 [[ -d "$app" ]] || { echo "no $app: run ./build.sh first"; exit 1; }
 [[ ! -e "$volume" ]] || { echo "$volume is already mounted: eject it first"; exit 1; }
 codesign --verify "$app"
+# Permissions survive an update only while this certificate signs every release.
+requirement='identifier "com.birhanu.toolbelt" and certificate leaf = H"cd166fb0bdac8fbd868d4deff2a353222ab0f4cd"'
+[[ "$(codesign -d -r- "$app" 2>&1)" == *"$requirement"* ]] || { echo "refusing to package: $app isn't signed with the Toolbelt Code Signing certificate (see Releases in CLAUDE.md)"; exit 1; }
 
 work=$(mktemp -d)
 trap 'hdiutil detach "$volume" -quiet 2>/dev/null || true; rm -rf "$work"' EXIT

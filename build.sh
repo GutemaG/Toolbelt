@@ -13,9 +13,14 @@ scratch="$HOME/Library/Developer/$name/build"
 config=release
 [[ " $* " == *" --debug "* ]] && config=debug
 
-# Sign with your Apple Development certificate when you have one (Xcode >
-# Settings > Accounts). Otherwise sign ad hoc, which is fine for your own Mac.
+# Releases must be signed with the "Toolbelt Code Signing" certificate, so permissions
+# survive updates (see Releases in CLAUDE.md). Without it, use your Apple Development
+# certificate when you have one (Xcode > Settings > Accounts), or sign ad hoc, which is
+# fine for your own Mac.
 identity="${SIGN_IDENTITY:-}"
+if [[ -z "$identity" ]]; then
+  identity=$(security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Toolbelt Code Signing"' | tr -d '"' || true)
+fi
 if [[ -z "$identity" ]]; then
   identity=$(security find-identity -v -p codesigning 2>/dev/null | grep -m1 -o '"Apple Development: [^"]*"' | tr -d '"' || true)
 fi
@@ -48,6 +53,7 @@ if [[ -d "$here/Icon/AppIcon.icon" ]]; then
 fi
 xattr -cr "$app"
 codesign --force --sign "$identity" "$app" 2>&1 | grep -v "replacing existing signature" || true
+codesign --verify "$app" || { echo "signing failed"; exit 1; }
 echo "installed $app (signed: ${identity})"
 
 if [[ " $* " == *" --open "* ]]; then

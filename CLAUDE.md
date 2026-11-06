@@ -47,6 +47,13 @@ The bama plugin has a skill for each step: `mac-design` (design rules),
 `swift-swiftui`, `os-integrations`, `performance`, `build-and-verify`,
 `test-mac-app`, `app-icon`, `user-stories`, and `improve-loop`. Use them.
 
+## Releases
+
+- Sign every release with the `Toolbelt Code Signing` certificate in the login Keychain, so people keep their permissions when they update. `build.sh` uses it when it's there, and `tools/make_dmg.sh` refuses anything else.
+- Never release an ad hoc build, replace the certificate, or change the app ID `com.birhanu.toolbelt`. Each of those makes everyone grant permissions again.
+- The certificate's private key stays out of the repo. Keep a backup of it outside this Mac.
+- To release: raise `CFBundleShortVersionString` in `Info.plist.in`, run `./build.sh` and `tools/make_dmg.sh`, then attach `Toolbelt.dmg` with that exact name to a GitHub release tagged `vX.Y`. The download link on birhanu.dev/toolbelt depends on the name.
+
 ## Git
 
 - Commit after each working change, with a message that says what the user can now do.

@@ -9,12 +9,24 @@ Everything is stored locally on your Mac, with no account and no server.
 ## Requirements
 
 - macOS 26 or later
-- Xcode 26 or later, to build it (developed with Xcode 27.2)
+- Xcode 26 or later, only if you build it yourself (developed with Xcode 27.2)
 - An Apple silicon Mac. Intel Macs haven't been tested.
 
 ## Install
 
-There's no prebuilt download yet, so you build it from source. It takes about 30 seconds.
+### Download
+
+1. Download [Toolbelt.dmg](https://github.com/GutemaG/Toolbelt/releases/latest/download/Toolbelt.dmg) and open it.
+2. In the window that appears, drag Toolbelt onto Applications.
+3. Open Toolbelt from your Applications folder. macOS blocks it because it isn't notarized by Apple, so click **Done**.
+4. Go to **System Settings > Privacy & Security**, scroll down to Security, and click **Open Anyway**.
+5. Look for the new icon in your menu bar. Toolbelt has no Dock icon.
+
+Releases are signed with the same certificate, so your permissions carry over when you update. macOS may ask you to approve each new download with Open Anyway.
+
+### Build from source
+
+This takes about 30 seconds.
 
 1. Install [Xcode](https://apps.apple.com/app/xcode/id497799835) and open it once to finish setup.
 2. Clone the repo and run the build script:
@@ -31,12 +43,14 @@ The script installs the app to `~/Applications/Toolbelt.app` and opens it. To st
 
 ### Update
 
+Download the new version and replace the app, or if you built it yourself:
+
 ```bash
 git pull
 ./build.sh --open
 ```
 
-Without an Apple Development certificate, the build is signed only for your own Mac, and macOS may ask you to allow its permissions again after a rebuild.
+When you build it yourself without a certificate, the build is signed only for your own Mac, and macOS may ask you to allow its permissions again after a rebuild.
 
 ### Uninstall
 
