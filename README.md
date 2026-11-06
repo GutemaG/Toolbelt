@@ -150,3 +150,7 @@ tools/snap.sh               # take light and dark screenshots with sample data
 `tools/selftest.sh` and `tools/snap.sh` open the app's panels, which can take keyboard focus while they run.
 
 See [`CLAUDE.md`](CLAUDE.md) for the design rules and full workflow.
+
+## License
+
+[MIT](LICENSE)
