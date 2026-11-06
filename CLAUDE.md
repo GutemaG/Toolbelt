@@ -52,7 +52,8 @@ The bama plugin has a skill for each step: `mac-design` (design rules),
 - Sign every release with the `Toolbelt Code Signing` certificate in the login Keychain, so people keep their permissions when they update. `build.sh` uses it when it's there, and `tools/make_dmg.sh` refuses anything else.
 - Never release an ad hoc build, replace the certificate, or change the app ID `com.birhanu.toolbelt`. Each of those makes everyone grant permissions again.
 - The certificate's private key stays out of the repo. Keep a backup of it outside this Mac.
-- To release: raise `CFBundleShortVersionString` in `Info.plist.in`, run `./build.sh` and `tools/make_dmg.sh`, then attach `Toolbelt.dmg` with that exact name to a GitHub release tagged `vX.Y`. The download link on birhanu.dev/toolbelt depends on the name.
+- Sparkle installs updates. Its private signing key is also in the login Keychain and also needs a backup outside this Mac (`generate_keys -x <file>`, in the Sparkle artifacts). Never replace it, or installed copies reject every update.
+- To release: raise `CFBundleShortVersionString` in `Info.plist.in`, run `./build.sh` and `tools/make_dmg.sh "What's new"`, then attach both `Toolbelt.dmg` and `appcast.xml`, with those exact names, to a GitHub release tagged `vX.Y`. The download link on birhanu.dev/toolbelt and the update check in the app depend on them.
 
 ## Git
 

@@ -49,6 +49,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
         model.apps.refresh()
+        _ = AppUpdater.shared
         ToolPrefs.shared.onChange = { [weak self] in self?.apply() }
         apply()
     }
@@ -342,6 +343,7 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         }
         menu.addItem(.separator())
         menu.addItem(withTitle: "Settings…", action: #selector(openSettings), keyEquivalent: ",").target = self
+        menu.addItem(withTitle: "Check for Updates…", action: #selector(checkForUpdates), keyEquivalent: "u").target = self
         menu.addItem(withTitle: "Quit Toolbelt", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         item.menu = menu
         item.button?.performClick(nil)
@@ -352,6 +354,10 @@ final class StatusItemController: NSObject, NSPopoverDelegate {
         if let raw = sender.representedObject as? String, let tool = Tool(rawValue: raw) {
             PanelController.shared.show(tool)
         }
+    }
+
+    @objc private func checkForUpdates() {
+        AppUpdater.shared.checkNow()
     }
 
     @objc private func openSettings() {

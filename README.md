@@ -10,7 +10,20 @@ Everything is stored locally on your Mac, with no account and no server.
 
 - macOS 26 or later
 - Xcode 26 or later, only if you build it yourself (developed with Xcode 27.2)
-- An Apple silicon Mac. Intel Macs haven't been tested.
+- An Apple silicon Mac (M1 or later). Intel Macs aren't supported.
+
+### Which Mac runs which tool
+
+Most tools work on any supported Mac. These depend on the hardware:
+
+| | MacBook Pro | MacBook Air | iMac | Mac mini, Studio, Pro |
+|---|---|---|---|---|
+| **Knock** | M2 or later, M1 Pro, M1 Max | M2 or later | No | No |
+| **Camera** | Yes | Yes | Yes | With a connected camera or iPhone |
+| **Battery in System and Info** | Yes | Yes | No | No |
+| **Fans in System** | Yes | No | Yes | Yes |
+
+In the app, **Settings > Compatibility** checks your Mac and shows what each tool needs. Some tools also need a permission, listed under [Permissions](#permissions).
 
 ## Install
 
@@ -22,7 +35,7 @@ Everything is stored locally on your Mac, with no account and no server.
 4. Go to **System Settings > Privacy & Security**, scroll down to Security, and click **Open Anyway**.
 5. Look for the new icon in your menu bar. Toolbelt has no Dock icon.
 
-Releases are signed with the same certificate, so your permissions carry over when you update. macOS may ask you to approve each new download with Open Anyway.
+Releases are signed with the same certificate, so your permissions carry over when you update.
 
 ### Build from source
 
@@ -43,7 +56,9 @@ The script installs the app to `~/Applications/Toolbelt.app` and opens it. To st
 
 ### Update
 
-Download the new version and replace the app, or if you built it yourself:
+From version 0.3, Toolbelt checks for updates once a day and installs them with one click. You can also use **Check for Updates…** in its menu or Settings, or turn automatic checks off in Settings. Versions 0.1 and 0.2 can't update themselves, so download the latest version once.
+
+If you built it yourself:
 
 ```bash
 git pull
@@ -143,15 +158,16 @@ Your data is stored in a local database on your Mac and isn't encrypted by Toolb
 ~/Library/Application Support/Toolbelt/Toolbelt.store
 ```
 
-The app reaches the internet in three places:
+The app reaches the internet in four places:
 
+- **Updates** asks GitHub once a day whether there's a new version. You can turn this off in Settings.
 - **Info** asks [ipify](https://www.ipify.org) for your public IP address.
 - **Now Playing** downloads album art for the song playing in Spotify.
 - **Network Speed** runs Apple's `networkQuality` test when you click Test Speed. It takes about a minute and can use a few hundred MB.
 
 ## Development
 
-It's a Swift package with no Xcode project and no third-party dependencies. The app is in `Sources/Toolbelt`, and logic with no UI is in `Sources/ToolbeltKit`.
+It's a Swift package with no Xcode project. Its only dependency is [Sparkle](https://sparkle-project.org), which installs updates. The app is in `Sources/Toolbelt`, and logic with no UI is in `Sources/ToolbeltKit`.
 
 ```bash
 ./build.sh                  # build and install

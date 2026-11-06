@@ -338,6 +338,12 @@ enum SelfTest {
                 print("SKIP knock: this Mac has no motion sensor")
             }
             check("test runs never listen for knocks", Knock.shared.isSimulated && Knock.shared.state == .off)
+            check("this Mac's Knock status matches its sensor", Tool.knock.support.isUnavailable == !KnockSensor.isPresent)
+            check("every tool says what it needs", Tool.allCases.allSatisfy { !CompatibilityRules.requirement(forTool: $0.rawValue).isEmpty })
+            let version = AppUpdater.shared.versionText
+            check("the version reads from the app", version.hasPrefix("0.") && !version.contains("?"))
+            check("the update feed and key are in the app", Bundle.main.infoDictionary?["SUPublicEDKey"] != nil
+                  && (Bundle.main.infoDictionary?["SUFeedURL"] as? String)?.hasPrefix("https://") == true)
             let knownActions = Set(KnockAction.allCases.map(\.rawValue))
             check("every preset and suggested rule uses real actions",
                   KnockPreset.all.allSatisfy { ($0.left + $0.right).allSatisfy(knownActions.contains) }

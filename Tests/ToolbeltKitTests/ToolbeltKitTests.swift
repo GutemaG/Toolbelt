@@ -705,3 +705,23 @@ private func gregorian(firstWeekday: Int) -> Calendar {
     #expect(NoteRules.wordCount("one") == "1 word")
     #expect(NoteRules.wordCount("one two\nthree") == "3 words")
 }
+
+// MARK: Compatibility
+
+@Test func compatibilityFollowsTheHardware() {
+    let laptop = MacFacts(hasMotionSensor: true, hasCamera: true, hasBattery: true, hasFans: true)
+    let air = MacFacts(hasMotionSensor: true, hasCamera: true, hasBattery: true, hasFans: false)
+    let mini = MacFacts(hasMotionSensor: false, hasCamera: false, hasBattery: false, hasFans: true)
+    let tools = ["launcher", "clipboard", "snippets", "quickNote", "screenshots", "recording", "colors", "camera", "windows", "timer", "pomodoro", "calendar", "worldClock", "nowPlaying", "sound", "mixer", "toggles", "knock", "system", "info", "networkSpeed", "keepAwake"]
+    #expect(tools.allSatisfy { CompatibilityRules.support(forTool: $0, on: laptop) == .ready })
+    #expect(CompatibilityRules.support(forTool: "knock", on: mini).isUnavailable)
+    #expect(CompatibilityRules.support(forTool: "camera", on: mini).note?.contains("Connect") == true)
+    #expect(!CompatibilityRules.support(forTool: "camera", on: mini).isUnavailable)
+    #expect(CompatibilityRules.support(forTool: "system", on: air) == .limited("This Mac has no fan to show."))
+    #expect(CompatibilityRules.support(forTool: "system", on: mini) == .limited("This Mac has no battery to show."))
+    #expect(CompatibilityRules.support(forTool: "info", on: mini).note != nil)
+    let others = tools.filter { !["knock", "camera", "system", "info"].contains($0) }
+    #expect(others.allSatisfy { CompatibilityRules.support(forTool: $0, on: mini) == .ready })
+    #expect(tools.allSatisfy { !CompatibilityRules.requirement(forTool: $0).isEmpty })
+    #expect(CompatibilityRules.requirement(forTool: "knock").contains("MacBook"))
+}

@@ -42,6 +42,8 @@ mkdir -p "$HOME/Applications"
 rm -rf "$app"
 mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$bin" "$app/Contents/MacOS/$name"
+mkdir -p "$app/Contents/Frameworks"
+ditto "$scratch/$config/Sparkle.framework" "$app/Contents/Frameworks/Sparkle.framework"
 sed -e "s/__BUILD__/$(date +%Y%m%d%H%M)/" "$here/Info.plist.in" > "$app/Contents/Info.plist"
 # The icon: Icon/AppIcon.icon -> Resources/Assets.car + AppIcon.icns, rebuilt when it changed.
 if [[ -d "$here/Icon/AppIcon.icon" ]]; then
@@ -52,8 +54,12 @@ if [[ -d "$here/Icon/AppIcon.icon" ]]; then
   cp -X "$car" "$here/Resources/AppIcon.icns" "$app/Contents/Resources/"
 fi
 xattr -cr "$app"
-codesign --force --sign "$identity" "$app" 2>&1 | grep -v "replacing existing signature" || true
-codesign --verify "$app" || { echo "signing failed"; exit 1; }
+# Inside out: Sparkle's helpers, then the framework, then the app that seals them.
+sparkle="$app/Contents/Frameworks/Sparkle.framework"
+for part in "$sparkle"/Versions/B/XPCServices/*.xpc "$sparkle/Versions/B/Autoupdate" "$sparkle/Versions/B/Updater.app" "$sparkle" "$app"; do
+  codesign --force --sign "$identity" "$part" 2>&1 | grep -v "replacing existing signature" || true
+done
+codesign --verify --deep --strict "$app" || { echo "signing failed"; exit 1; }
 echo "installed $app (signed: ${identity})"
 
 if [[ " $* " == *" --open "* ]]; then

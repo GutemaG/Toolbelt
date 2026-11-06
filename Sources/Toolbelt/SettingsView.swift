@@ -74,6 +74,7 @@ struct SettingsView: View {
             case .networkSpeed: ToolSettings(tool: .networkSpeed)
             case .keepAwake: ToolSettings(tool: .keepAwake)
             case .appearance: AppearanceSettings()
+            case .compatibility: CompatibilitySettings()
             }
         }
         .formStyle(.grouped)
@@ -101,7 +102,7 @@ enum SettingsGroup: String, CaseIterable, Identifiable {
 
 /// The Settings pages. Snapshot mode walks through every case.
 enum SettingsPage: String, CaseIterable, Identifiable {
-    case settings, launcher, clipboard, snippets, quickNote, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, networkSpeed, keepAwake, appearance
+    case settings, launcher, clipboard, snippets, quickNote, screenshots, recording, colors, camera, windows, timer, pomodoro, calendar, worldClock, nowPlaying, sound, mixer, toggles, knock, system, info, networkSpeed, keepAwake, appearance, compatibility
 
     var id: String { rawValue }
 
@@ -114,7 +115,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         case .screenshots, .recording, .colors, .camera: .capture
         case .windows: .windows
         case .timer, .pomodoro, .calendar, .worldClock, .nowPlaying, .sound, .mixer, .toggles, .knock, .system, .info, .networkSpeed, .keepAwake: .tools
-        case .appearance: .app
+        case .appearance, .compatibility: .app
         }
     }
 
@@ -122,6 +123,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: "Settings"
         case .appearance: "Appearance"
+        case .compatibility: "Compatibility"
         default: tool?.title ?? ""
         }
     }
@@ -130,6 +132,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: "gearshape.fill"
         case .appearance: "paintpalette.fill"
+        case .compatibility: "checkmark.seal.fill"
         default: tool?.symbol ?? "questionmark"
         }
     }
@@ -138,6 +141,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: .indigo
         case .appearance: .pink
+        case .compatibility: .green
         default: tool?.tint ?? .gray
         }
     }
@@ -146,6 +150,7 @@ enum SettingsPage: String, CaseIterable, Identifiable {
         switch self {
         case .settings: "Permissions, menu bar, Dock and startup."
         case .appearance: "The accent color and how you switch tools."
+        case .compatibility: "What each tool needs, and how it works on this Mac."
         default: tool?.summary ?? ""
         }
     }
@@ -183,6 +188,7 @@ struct GeneralSettings: View {
     @State private var screenRecording = CGPreflightScreenCaptureAccess()
     @State private var camera = AVCaptureDevice.authorizationStatus(for: .video) == .authorized
     @State private var systemAudio = AudioCapture.status == .allowed
+    @State private var checksForUpdates = AppUpdater.shared.checksAutomatically
 
     var body: some View {
         Section {
@@ -264,6 +270,20 @@ struct GeneralSettings: View {
         }
         .toggleStyle(.switch)
         .controlSize(.mini)
+
+        Section {
+            LabeledContent("Version", value: AppUpdater.shared.versionText)
+            Toggle(isOn: $checksForUpdates) {
+                Text("Check for updates automatically")
+                Text("Asks GitHub once a day. You choose when to install.")
+            }
+            .toggleStyle(.switch)
+            .controlSize(.mini)
+            .onChange(of: checksForUpdates) { _, on in AppUpdater.shared.checksAutomatically = on }
+            Button("Check for Updates…") { AppUpdater.shared.checkNow() }
+        } header: {
+            Text("Updates")
+        }
 
         Section {
             ForEach(prefs.panelOrder) { tool in
@@ -387,16 +407,25 @@ struct ToolSettings: View {
     @State private var confirmClear = false
 
     var body: some View {
+        let support = tool.support
         Section {
-            Toggle(isOn: prefs.binding(\.enabled, tool)) {
+            // A tool that can't work here reads as off, whatever was saved.
+            Toggle(isOn: support.isUnavailable ? .constant(false) : prefs.binding(\.enabled, tool)) {
                 Text("Turn on \(tool.title)")
                 Text("When off, its shortcut and menu bar icon go away and it uses no power.")
             }
+            .disabled(support.isUnavailable)
             Toggle(isOn: prefs.binding(\.ownIcon, tool)) {
                 Text("Show \(tool.title) in the menu bar")
                 Text("Gives \(tool.title) its own icon that opens just this tool.")
             }
-            .disabled(!prefs.enabled.contains(tool))
+            .disabled(!prefs.enabled.contains(tool) || support.isUnavailable)
+        } footer: {
+            if let note = support.note {
+                Label(note, systemImage: support.isUnavailable ? "minus.circle.fill" : "exclamationmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
         }
         .toggleStyle(.switch)
         .controlSize(.mini)

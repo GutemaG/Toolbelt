@@ -752,6 +752,30 @@ UX:
 - States: "Checking…", "No Connection"; test idle, "Testing…", result, "The Test Didn't Finish"
 Status: done
 
+### S-093 Update Toolbelt without downloading it again
+As the user, Toolbelt tells me when there's a new version, and one click installs it and relaunches, with my data and permissions kept.
+Acceptance:
+- [self] Test runs never check for updates; the version and the update settings read correctly.
+- [snap] settings-settings shows the Updates section.
+- [manual] An older copy finds a newer version, verifies its signature, installs it and relaunches; a copy with a bad signature is rejected.
+UX:
+- Flow: a window says what's new -> Install Update -> relaunch. Also Settings > Settings > Check for Updates… and the icon's menu.
+- Surface: Sparkle's standard update window. It reads appcast.xml from the latest GitHub release.
+- Words: "Check for Updates…", "Check for updates automatically"
+Status: done
+
+### S-094 See what each tool needs on my Mac
+As the user, I open Settings > Compatibility and see my Mac and, for each tool, what it needs and whether it's ready here.
+Acceptance:
+- [unit] Knock is unavailable with no motion sensor; Camera, System and Info are limited by missing hardware; everything else is ready; every tool has a requirement.
+- [self] This Mac's Knock status matches the sensor.
+- [snap] settings-compatibility and settings-knock, on this Mac and with APP_SIMULATE_MAC=desktop: Knock reads as off and its switch can't be changed.
+UX:
+- Flow: Settings > Compatibility; a tool's own page also says what's missing and turns its switch off if it can't work.
+- Surface: one grouped Form. Status always has words beside its color.
+- Words: "Ready", "Limited", "Not on This Mac"
+Status: done
+
 ## Later
 
 - Snippets: saved text with a keyword.
